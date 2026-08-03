@@ -34,7 +34,7 @@
 
 ### 流程
 
-1. **传图**：用 anki-mcp 的 `storeMediaFile` 把图片传进 Anki 的 `collection.media`。
+1. **传图**：用 AnkiConnect 的 `storeMediaFile`（curl）把图片传进 Anki 的 `collection.media`。
    - ✅ 推荐用**本地文件路径**或 **URL**——快、省 token
    - ❌ 避免用 base64 内嵌——极慢且极费 token
 2. **拿到文件名**：`storeMediaFile` 返回存在 Anki 里的文件名（如 `heart.png`）。
@@ -171,7 +171,7 @@ Image Occlusion（IO）是在图片上**画遮挡框**，复习时遮挡某区�
 
 ## 接入指南（模型无关）
 
-路径 A 完全靠 anki-mcp 的 `storeMediaFile`，**不需要外部多模态模型**。
+路径 A 完全靠 AnkiConnect 的 `storeMediaFile`（curl），**不需要外部多模态模型**。
 路径 B 需要一个多模态模型识别图片。使用者按自己有的模型接入，本 Skill 不绑定具体商。
 
 ### 三种典型接入方式

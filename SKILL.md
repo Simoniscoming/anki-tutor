@@ -21,20 +21,21 @@ description: 把文本/笔记/代码/公式/图片拆成高质量 Anki 闪卡并
 
 ## 何时不使用（交给别的工具，别抢活）
 
-- 纯查现有卡 → 直接用 anki-mcp 的 `findNotes`/`notesInfo`，不必走本 Skill 的拆卡流程
+- 纯查现有卡 → 直接用 AnkiConnect 的 `findNotes`/`notesInfo`（curl），不必走本 Skill 的拆卡流程
 - 纯复习/调度 → 不是本 Skill 职责（未来可能有 anki-review）
 - 删卡 → 直接用 `deleteNotes`（注意它需 `confirmDeletion: true`）
 - Anki 本身报错、AnkiConnect 连不上 → 排障，不是制卡
 
 ## 前置条件
 
-每次制卡前确认这三项，缺一不可：
+每次制卡前确认这两项，缺一不可：
 
 1. **Anki 桌面端正在运行**（不是手机版，不是 AnkiWeb 网页）
 2. **AnkiConnect 插件已启用**（默认监听 `http://localhost:8765`）
-3. **anki-mcp 已加载**（项目 `.mcp.json` 里配置的 MCP server）
 
-如果调 MCP 工具时报连接错误，**先让用户检查 Anki 是否开着**，而不是盲目重试——99% 的连接失败都是 Anki 没开。
+本 Skill **不依赖外部 MCP**。所有与 Anki 的交互都通过 curl 调用 AnkiConnect 的 HTTP 接口完成（`POST http://localhost:8765`，JSON-RPC）。调用的 action 白名单、curl 模板、已知坑详见 `references/anki-control.md`——**调用 AnkiConnect 前必读该文件**。
+
+如果调 curl 时报连接错误，**先让用户检查 Anki 是否开着**，而不是盲目重试——99% 的连接失败都是 Anki 没开。
 
 ## 核心工作流
 
@@ -55,7 +56,7 @@ description: 把文本/笔记/代码/公式/图片拆成高质量 Anki 闪卡并
    │    但要在预览里告知"我推断成 X，不对请说"）
    │
    ▼
-② 按法则拆成原子卡 ──► 必读 references/card-principles.md
+② 按法则拆成原子卡 ──► 必读 references/card-principles.md（含 20 条法则依据：references/twenty-rules.md）
    │   选卡片类型 ──► 读 references/card-type-selection.md
    │   拆完看张数：
    │     > 40 张 → 按 card-principles.md 的总量阈值先问"精简 vs 继续"

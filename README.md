@@ -10,7 +10,8 @@
 
 1. **Anki 桌面端**（开着，因为要写库）
 2. **AnkiConnect 插件**（在 Anki 里安装，默认监听 `http://localhost:8765`）
-3. **Node.js**（给 anki-mcp 用，`npx` 随附）
+
+> **不需要 MCP。** 本 Skill 通过 curl 直接调用 AnkiConnect 的 HTTP 接口，不依赖任何外部 MCP server。详见 `references/anki-control.md`。
 
 ## 安装 Skill
 
@@ -32,30 +33,6 @@ git clone https://github.com/Simoniscoming/HiTutor.git ~/.claude/skills/anki-car
 Windows 上 `~` 即 `C:\Users\<你的用户名>`。
 
 > 优先级：同名 Skill 下，项目级会覆盖全局。可据此做"全局稳定版 + 项目级实验版"的双轨管理。
-
-## 配置 MCP 服务
-
-Skill 通过 `anki-mcp` 这个 MCP 服务与 Anki 通信。选一种配置：
-
-**项目级**——在项目根放一个 `.mcp.json`（参考本仓库的 `.mcp.json.example`）：
-
-```json
-{
-  "mcpServers": {
-    "anki-mcp": {
-      "command": "npx",
-      "args": ["-y", "@ankimcp/anki-mcp-server@latest", "--stdio"],
-      "env": { "ANKI_CONNECT_URL": "http://localhost:8765" }
-    }
-  }
-}
-```
-
-**全局**——所有项目共用一个：
-
-```bash
-claude mcp add anki-mcp --scope user -- npx -y @ankimcp/anki-mcp-server@latest --stdio
-```
 
 ## 用法
 
