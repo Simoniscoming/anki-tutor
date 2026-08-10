@@ -58,16 +58,16 @@ curl -s -X POST http://localhost:8765 -d '{"action":"version","version":6}'
 | ✅ `getIntervals` | 卡片未来间隔预测 | 如 `[10分, 12天, 30天, 1.3月]` |
 | ✅ `getEaseFactors` | 读难度因子 | 整数数组 |
 | ✅ `setEaseFactors` | 写难度因子 | 整数数组 |
-| 🟡 `cardsToNotes` <!-- unchecked --> | cardId → noteId | noteId 数组 |
+| ✅ `cardsToNotes` | cardId → noteId | noteId 数组 |
 | 🟡 `cardsModTime` <!-- unchecked --> | 卡片修改时间 | — |
 | 🟡 `setSpecificValueOfCard` <!-- unchecked --> | 设卡片特定字段值 | — |
-| 🟡 `suspend` <!-- unchecked --> | 挂起卡片（调控计划） | — |
-| 🟡 `unsuspend` <!-- unchecked --> | 恢复卡片 | — |
-| 🟡 `suspended` <!-- unchecked --> | 查单卡是否挂起 | bool |
+| ✅ `suspend` | 挂起卡片（调控计划） | true/false |
+| ✅ `unsuspend` | 恢复卡片 | — |
+| ✅ `suspended` | 查单卡是否挂起 | bool |
 | 🟡 `areSuspended` <!-- unchecked --> | 查多卡是否挂起 | bool 数组 |
 | 🟡 `areDue` <!-- unchecked --> | 查是否到期 | bool |
-| 🟡 `setDueDate` <!-- unchecked --> | **改卡片到期日（直接调计划）** | — |
-| 🟡 `forgetCards` <!-- unchecked --> | 重置为新卡（重学） | — |
+| ✅ `setDueDate` | **改卡片到期日（直接调计划）** `{"cards":[],"days":"5"}` | true |
+| ✅ `forgetCards` | 重置为新卡（重学，type→0） | — |
 | 🟡 `relearnCards` <!-- unchecked --> | 置为 relearning | — |
 | 🟡 `answerCards` <!-- unchecked --> | 程序化答题（影响 FSRS 调度，**慎用**） | — |
 
@@ -84,7 +84,7 @@ curl -s -X POST http://localhost:8765 -d '{"action":"version","version":6}'
 | 🟡 `canAddNote` <!-- unchecked --> | 预检：能否加单卡 | bool |
 | 🟡 `canAddNotes` <!-- unchecked --> | 预检：能否加批量卡 | bool 数组 |
 | 🟡 `canAddNoteWithErrorDetail` <!-- unchecked --> | 预检单卡 + 错误详情 | — |
-| 🟡 `canAddNotesWithErrorDetail` <!-- unchecked --> | 预检批量 + 错误详情（更推荐） | — |
+| ✅ `canAddNotesWithErrorDetail` | 预检批量 + 错误详情（更推荐） | `[{"canAdd":bool}]` 或含 error |
 | 🟡 `updateNote` <!-- unchecked --> | 改字段+标签（比 updateNoteFields 全） | — |
 | 🟡 `updateNoteModel` <!-- unchecked --> | 改笔记的 model | — |
 | 🟡 `getNoteTags` <!-- unchecked --> | 读单卡标签 | — |
@@ -170,9 +170,9 @@ curl -s -X POST http://localhost:8765 -d '{"action":"version","version":6}'
 | ✅ `getCollectionStatsHTML` | 完整统计页 HTML（含图表） | HTML 字符串 |
 | ✅ `getNumCardsReviewedByDay` | **按天列复习数（看趋势）** | `[[日期, 数量], ...]` 全库所有有记录的天 |
 | ✅ `cardReviews` | **取某 deck 在某时间点后的复习记录（评估核心）** | revlog 记录数组 |
-| 🟡 `getReviewsOfCards` <!-- unchecked --> | **取卡片完整复习历史** | — |
-| 🟡 `getLatestReviewID` <!-- unchecked --> | 最新复习时间戳 | — |
-| 🟡 `insertReviews` <!-- unchecked --> | 插入复习记录（**慎用，影响数据**） | — |
+| ✅ `getReviewsOfCards` | **取卡片完整复习历史** | `{cardId: [{id,usn,ease,ivl,...}]}` |
+| ✅ `getLatestReviewID` | 某 deck 最新复习时间戳（毫秒） | 整数，无则 0 |
+| ✅ `insertReviews` | 插入复习记录（**直接写 revlog，污染 FSRS，慎用**） | — |
 
 ### GUI（驱动 Anki 界面）
 
@@ -205,7 +205,7 @@ curl -s -X POST http://localhost:8765 -d '{"action":"version","version":6}'
 |---|---|
 | ✅ `version` | API 版本（自检用） |
 | ✅ `apiReflect` | **让 AnkiConnect 自报所有 API（元查询/调试）** | `{"scopes":["actions"]}` → 121 个 action 名 |
-| 🟡 `multi` <!-- unchecked --> | **一次请求跑多个 action（减少往返，提稳定性）** |
+| ✅ `multi` | **一次请求跑多个 action（减少往返，提稳定性）** | 数组，顺序对应请求 |
 | 🟡 `requestPermission` <!-- unchecked --> | 请求 API 权限 |
 | 🟡 `sync` <!-- unchecked --> | 同步 AnkiWeb（**fire-and-forget，可能静默排队**） |
 | 🟡 `getProfiles` <!-- unchecked --> | 列所有用户档案 |
@@ -378,7 +378,7 @@ curl -s -X POST http://localhost:8765 -d '{
 }'
 ```
 
-### 模板 9：multi 批量调用（减少往返）<!-- unchecked -->
+### 模板 9：multi 批量调用（减少往返）
 
 `multi` 把多个 action 打包成一次 HTTP 请求——**减少 curl 往返次数，是提升稳定性的关键手段**。读多 deck 的 config + stats 这种场景特别有用。
 
@@ -396,9 +396,9 @@ curl -s -X POST http://localhost:8765 -d '{
 
 ---
 
-## 四坑
+## 五坑
 
-这四个坑都来自实测，每个都有明确的防御方法。
+这五个坑都来自实测，每个都有明确的防御方法。
 
 ### 坑 1：LLM 幻觉 action 名
 
@@ -464,6 +464,17 @@ curl -s -X POST http://localhost:8765 -d '{
 
 > 想保留卡、只移走它们？用 `changeDeck` 先把卡移到别的牌组，再 `deleteDecks`。
 
+### 坑 5：insertReviews 直接污染 FSRS 调度（实测确认）
+
+`insertReviews` 直接往 `revlog` 表（复习日志）写记录——而 FSRS 的调度算法就靠 revlog 计算。实测确认：插入一条假复习记录后，`getReviewsOfCards`/`cardReviews`/`getLatestReviewID` **全部能读到它**，FSRS 会把它当成真实复习历史。
+
+**这意味着**：用 insertReviews 灌假数据 = 篡改 FSRS 的学习依据，会让调度算法基于伪造数据调整间隔，**实质损坏你的学习计划**。
+
+**防御**：
+- **永远不要对真实卡用 insertReviews**。它只在批量导入历史数据（从别处迁移复习记录）时有正当用途，且必须极度谨慎。
+- 如果必须用，先在临时牌组验证，确认数据格式正确后，再对目标卡操作——且做好备份。
+- 本 Skill 默认不调用此 action，除非用户明确要求迁移历史数据。
+
 ---
 
 ## FSRS 边界
@@ -504,7 +515,7 @@ curl -s -X POST http://localhost:8765 -d '{
 | 当前保留率设置 | desiredRetention | `getDeckConfig` | ✅ |
 | 近 N 天复习量趋势 | 每日复习数数组（全库所有有记录的天） | `getNumCardsReviewedByDay` | ✅ |
 | 某 deck 的完整复习记录 | 单次复习记录（含答对率） | `cardReviews` | ✅ |
-| 某卡的完整复习历史 | 该卡所有历史 | `getReviewsOfCards` | 🟡 <!-- unchecked --> |
+| 某卡的完整复习历史 | 该卡所有历史 | `getReviewsOfCards` | ✅ |
 
 调控学习计划（不只读，直接改）：
 
@@ -514,7 +525,7 @@ curl -s -X POST http://localhost:8765 -d '{
 | 挂起/恢复卡片 | `suspend` / `unsuspend` | 🟡 <!-- unchecked --> |
 | 重置为新卡（重学） | `forgetCards` | 🟡 <!-- unchecked --> |
 | 改目标保留率/FSRS权重 | `saveDeckConfig` | ✅ |
-| 批量操作减少往返 | `multi` | 🟡 <!-- unchecked --> |
+| 批量操作减少往返 | `multi` | ✅ |
 
 > 用 `getCollectionStatsHTML` 拿到的是带 base64 图的 HTML，需要解析才能提取数字。日常评估优先用前几个结构化 action，HTML 留给"要看图时"。
 
