@@ -56,12 +56,15 @@ curl -s -X POST http://localhost:8765 -d '{"action":"version","version":6}'
 | ✅ `findCards` | 按 query 搜卡片 | cardId 数组 |
 | ✅ `cardsInfo` | 取卡片详情（含调度数据） | 含 interval、reps、lapses、**nextReviews** |
 | ✅ `getIntervals` | 卡片未来间隔预测 | 如 `[10分, 12天, 30天, 1.3月]` |
-| ✅ `getEaseFactors` / `setEaseFactors` | 读/写难度因子 | 整数数组 |
+| ✅ `getEaseFactors` | 读难度因子 | 整数数组 |
+| ✅ `setEaseFactors` | 写难度因子 | 整数数组 |
 | 🟡 `cardsToNotes` <!-- unchecked --> | cardId → noteId | noteId 数组 |
 | 🟡 `cardsModTime` <!-- unchecked --> | 卡片修改时间 | — |
 | 🟡 `setSpecificValueOfCard` <!-- unchecked --> | 设卡片特定字段值 | — |
-| 🟡 `suspend` / `unsuspend` <!-- unchecked --> | 挂起 / 恢复卡片（调控计划） | — |
-| 🟡 `suspended` / `areSuspended` <!-- unchecked --> | 查挂起状态 | bool |
+| 🟡 `suspend` <!-- unchecked --> | 挂起卡片（调控计划） | — |
+| 🟡 `unsuspend` <!-- unchecked --> | 恢复卡片 | — |
+| 🟡 `suspended` <!-- unchecked --> | 查单卡是否挂起 | bool |
+| 🟡 `areSuspended` <!-- unchecked --> | 查多卡是否挂起 | bool 数组 |
 | 🟡 `areDue` <!-- unchecked --> | 查是否到期 | bool |
 | 🟡 `setDueDate` <!-- unchecked --> | **改卡片到期日（直接调计划）** | — |
 | 🟡 `forgetCards` <!-- unchecked --> | 重置为新卡（重学） | — |
@@ -78,11 +81,14 @@ curl -s -X POST http://localhost:8765 -d '{"action":"version","version":6}'
 | ✅ `notesInfo` | 取笔记详情（字段/标签/模型） | 含 fields、tags、modelName |
 | ✅ `updateNoteFields` | 改笔记字段 | true/false |
 | ✅ `deleteNotes` | 删笔记（**需 confirmDeletion:true**） | — |
-| 🟡 `canAddNotes` <!-- unchecked --> | 预检：能否加卡 | bool 数组 |
-| 🟡 `canAddNotesWithErrorDetail` <!-- unchecked --> | 预检 + 错误详情（更推荐） | — |
+| 🟡 `canAddNote` <!-- unchecked --> | 预检：能否加单卡 | bool |
+| 🟡 `canAddNotes` <!-- unchecked --> | 预检：能否加批量卡 | bool 数组 |
+| 🟡 `canAddNoteWithErrorDetail` <!-- unchecked --> | 预检单卡 + 错误详情 | — |
+| 🟡 `canAddNotesWithErrorDetail` <!-- unchecked --> | 预检批量 + 错误详情（更推荐） | — |
 | 🟡 `updateNote` <!-- unchecked --> | 改字段+标签（比 updateNoteFields 全） | — |
 | 🟡 `updateNoteModel` <!-- unchecked --> | 改笔记的 model | — |
-| 🟡 `getNoteTags` / `updateNoteTags` <!-- unchecked --> | 读/改单卡标签 | — |
+| 🟡 `getNoteTags` <!-- unchecked --> | 读单卡标签 | — |
+| 🟡 `updateNoteTags` <!-- unchecked --> | 改单卡标签 | — |
 | 🟡 `notesModTime` <!-- unchecked --> | 笔记修改时间 | — |
 | 🟡 `removeEmptyNotes` <!-- unchecked --> | 删空笔记 | — |
 
@@ -113,13 +119,26 @@ curl -s -X POST http://localhost:8765 -d '{"action":"version","version":6}'
 | ✅ `createModel` | 建新笔记类型 |
 | 🟡 `modelNamesAndIds` <!-- unchecked --> | 模型名 + ID |
 | 🟡 `modelNameFromId` <!-- unchecked --> | modelId → name |
-| 🟡 `findModelsById` / `findModelsByName` <!-- unchecked --> | 按 ID/名查模型详情 |
-| 🟡 `modelTemplates` / `modelStyling` <!-- unchecked --> | 读模板/CSS |
-| 🟡 `updateModelTemplates` / `updateModelStyling` <!-- unchecked --> | 改模板/CSS |
-| 🟡 `modelFieldAdd/Remove/Rename/Reposition` <!-- unchecked --> | 字段增删改序 |
-| 🟡 `modelFieldSetFont` / `modelFieldSetFontSize` <!-- unchecked --> | 字段字体/字号 |
-| 🟡 `modelFieldDescriptions` / `modelFieldSetDescription` <!-- unchecked --> | 字段描述 |
-| 🟡 `modelTemplateAdd/Remove/Rename/Reposition` <!-- unchecked --> | 模板增删改序 |
+| 🟡 `findModelsById` <!-- unchecked --> | 按 ID 查模型详情 |
+| 🟡 `findModelsByName` <!-- unchecked --> | 按名查模型详情 |
+| 🟡 `modelTemplates` <!-- unchecked --> | 读模板（Front/Back HTML） |
+| 🟡 `modelStyling` <!-- unchecked --> | 读 CSS |
+| 🟡 `updateModelTemplates` <!-- unchecked --> | 改模板 |
+| 🟡 `updateModelStyling` <!-- unchecked --> | 改 CSS |
+| 🟡 `modelFieldsOnTemplates` <!-- unchecked --> | 查模板上用了哪些字段 |
+| 🟡 `modelFieldAdd` <!-- unchecked --> | 加字段 |
+| 🟡 `modelFieldRemove` <!-- unchecked --> | 删字段 |
+| 🟡 `modelFieldRename` <!-- unchecked --> | 重命名字段 |
+| 🟡 `modelFieldReposition` <!-- unchecked --> | 调字段顺序 |
+| 🟡 `modelFieldFonts` <!-- unchecked --> | 读字段字体/字号 |
+| 🟡 `modelFieldSetFont` <!-- unchecked --> | 设字段字体 |
+| 🟡 `modelFieldSetFontSize` <!-- unchecked --> | 设字段字号 |
+| 🟡 `modelFieldDescriptions` <!-- unchecked --> | 读字段描述 |
+| 🟡 `modelFieldSetDescription` <!-- unchecked --> | 设字段描述 |
+| 🟡 `modelTemplateAdd` <!-- unchecked --> | 加模板 |
+| 🟡 `modelTemplateRemove` <!-- unchecked --> | 删模板 |
+| 🟡 `modelTemplateRename` <!-- unchecked --> | 重命名模板 |
+| 🟡 `modelTemplateReposition` <!-- unchecked --> | 调模板顺序 |
 | 🟡 `findAndReplaceInModels` <!-- unchecked --> | 模型内查找替换 |
 
 ### 标签（Tag）
@@ -127,7 +146,8 @@ curl -s -X POST http://localhost:8765 -d '{"action":"version","version":6}'
 | action | 用途 |
 |---|---|
 | ✅ `getTags` | 列所有标签 |
-| ✅ `addTags` / `removeTags` | 加/删标签 |
+| ✅ `addTags` | 加标签 |
+| ✅ `removeTags` | 删标签 |
 | ✅ `replaceTags` | 重命名标签 |
 | 🟡 `replaceTagsInAllNotes` <!-- unchecked --> | 全库重命名标签 |
 | 🟡 `clearUnusedTags` <!-- unchecked --> | 清理未使用标签 |
@@ -137,7 +157,8 @@ curl -s -X POST http://localhost:8765 -d '{"action":"version","version":6}'
 | action | 用途 |
 |---|---|
 | ✅ `storeMediaFile` | 传图到 collection.media（**优先用本地路径/URL，避免 base64**） |
-| ✅ `retrieveMediaFile` / `getMediaFilesNames` | 取媒体 |
+| ✅ `retrieveMediaFile` | 取媒体文件 base64 |
+| ✅ `getMediaFilesNames` | 列媒体文件名 |
 | ✅ `deleteMediaFile` | 删媒体 |
 | 🟡 `getMediaDirPath` <!-- unchecked --> | 取 media 目录绝对路径 |
 
@@ -158,14 +179,20 @@ curl -s -X POST http://localhost:8765 -d '{"action":"version","version":6}'
 | action | 用途 |
 |---|---|
 | 🟡 `guiBrowse` <!-- unchecked --> | 打开浏览器搜卡 |
-| 🟡 `guiSelectCard` / `guiSelectNote` / `guiSelectedNotes` <!-- unchecked --> | 浏览器选卡 |
-| 🟡 `guiAddCards` / `guiEditNote` <!-- unchecked --> | 打开加卡/编辑对话框 |
+| 🟡 `guiSelectCard` <!-- unchecked --> | 浏览器选单卡 |
+| 🟡 `guiSelectNote` <!-- unchecked --> | 浏览器选笔记 |
+| 🟡 `guiSelectedNotes` <!-- unchecked --> | 取当前选中的笔记 |
+| 🟡 `guiAddCards` <!-- unchecked --> | 打开加卡对话框 |
+| 🟡 `guiEditNote` <!-- unchecked --> | 打开编辑对话框 |
 | 🟡 `guiCurrentCard` <!-- unchecked --> | 当前复习卡信息 |
-| 🟡 `guiShowQuestion` / `guiShowAnswer` <!-- unchecked --> | 显示问题/答案面 |
+| 🟡 `guiShowQuestion` <!-- unchecked --> | 显示问题面 |
+| 🟡 `guiShowAnswer` <!-- unchecked --> | 显示答案面 |
 | 🟡 `guiAnswerCard` <!-- unchecked --> | 答当前卡 |
 | 🟡 `guiStartCardTimer` <!-- unchecked --> | 重置计时 |
 | 🟡 `guiUndo` <!-- unchecked --> | 撤销 |
-| 🟡 `guiDeckOverview` / `guiDeckBrowser` / `guiDeckReview` <!-- unchecked --> | 牌组界面 |
+| 🟡 `guiDeckOverview` <!-- unchecked --> | 打开牌组概览 |
+| 🟡 `guiDeckBrowser` <!-- unchecked --> | 打开牌组浏览器 |
+| 🟡 `guiDeckReview` <!-- unchecked --> | 开始复习某牌组 |
 | 🟡 `guiImportFile` <!-- unchecked --> | 打开导入对话框 |
 | 🟡 `guiCheckDatabase` <!-- unchecked --> | 检查数据库 |
 | 🟡 `guiExitAnki` <!-- unchecked --> | 关闭 Anki |
@@ -177,12 +204,15 @@ curl -s -X POST http://localhost:8765 -d '{"action":"version","version":6}'
 | action | 用途 |
 |---|---|
 | ✅ `version` | API 版本（自检用） |
+| ✅ `apiReflect` | **让 AnkiConnect 自报所有 API（元查询/调试）** | `{"scopes":["actions"]}` → 121 个 action 名 |
 | 🟡 `multi` <!-- unchecked --> | **一次请求跑多个 action（减少往返，提稳定性）** |
-| 🟡 `apiReflect` <!-- unchecked --> | 让 AnkiConnect 自报所有 API（元查询/调试） |
 | 🟡 `requestPermission` <!-- unchecked --> | 请求 API 权限 |
 | 🟡 `sync` <!-- unchecked --> | 同步 AnkiWeb（**fire-and-forget，可能静默排队**） |
-| 🟡 `getProfiles` / `getActiveProfile` / `loadProfile` <!-- unchecked --> | 用户档案 |
-| 🟡 `exportPackage` / `importPackage` <!-- unchecked --> | 导出/导入 .apkg |
+| 🟡 `getProfiles` <!-- unchecked --> | 列所有用户档案 |
+| 🟡 `getActiveProfile` <!-- unchecked --> | 当前档案名 |
+| 🟡 `loadProfile` <!-- unchecked --> | 加载指定档案 |
+| 🟡 `exportPackage` <!-- unchecked --> | 导出 .apkg |
+| 🟡 `importPackage` <!-- unchecked --> | 导入 .apkg |
 | 🟡 `reloadCollection` <!-- unchecked --> | 重载数据库 |
 
 ### ❌ 源码里不存在（实测确认，不要调）
@@ -375,6 +405,12 @@ curl -s -X POST http://localhost:8765 -d '{
 LLM 会编造看似合理但**不存在**的 action（比如 `getConfig`、`getReviewCount`、`enableFsrs`）。AnkiConnect 会返回 `unsupported action`，但如果你不检查 error 字段就会误以为成功。
 
 **防御**：只调用「白名单」表里的 action。不确定某个 action 是否存在时，**先查白名单，不在表里就别调**。白名单是实测验证过的，可以信任。
+
+> **运行时核验**：如果连白名单都不确定（比如 Anki 升级后），用 `apiReflect` 让 AnkiConnect 自报当前环境实际注册的所有 action：
+> ```bash
+> curl -s -X POST http://localhost:8765 -d '{"action":"apiReflect","version":6,"params":{"scopes":["actions"]}}'
+> ```
+> 返回的 `actions` 列表是**当前环境真实可调**的 action，比源码 grep 更准（反映运行时实际状态，不是理论值）。调用某 action 前先 `in` 一下这个列表，就能拦住幻觉。
 
 ### 坑 2：中文牌组名 / 特殊字符
 
