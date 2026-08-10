@@ -466,14 +466,20 @@ curl -s -X POST http://localhost:8765 -d '{
 
 ### 坑 5：insertReviews 直接污染 FSRS 调度（实测确认）
 
-`insertReviews` 直接往 `revlog` 表（复习日志）写记录——而 FSRS 的调度算法就靠 revlog 计算。实测确认：插入一条假复习记录后，`getReviewsOfCards`/`cardReviews`/`getLatestReviewID` **全部能读到它**，FSRS 会把它当成真实复习历史。
+`insertReviews` 绕过 Anki 的所有调度逻辑，用一句 `insert into revlog` 直接往复习日志表写记录。源码里没有任何校验。
 
-**这意味着**：用 insertReviews 灌假数据 = 篡改 FSRS 的学习依据，会让调度算法基于伪造数据调整间隔，**实质损坏你的学习计划**。
+**revlog（复习日志）是 FSRS 算调度的基础数据**。FSRS 把 revlog 里的每一条记录都当成"用户真实发生的复习行为"，用来训练遗忘曲线、预测间隔。实测确认：插入一条假记录后，`getReviewsOfCards`/`cardReviews`/`getLatestReviewID` 全部读到它——Anki 完全分不清真假。
 
-**防御**：
-- **永远不要对真实卡用 insertReviews**。它只在批量导入历史数据（从别处迁移复习记录）时有正当用途，且必须极度谨慎。
-- 如果必须用，先在临时牌组验证，确认数据格式正确后，再对目标卡操作——且做好备份。
-- 本 Skill 默认不调用此 action，除非用户明确要求迁移历史数据。
+**影响的连锁反应**：
+1. **单卡调度失真**：FSRS 会以为这张卡你"答得轻松、间隔还能涨"，于是下次给更长间隔——实际上你根本没掌握，到期就忘了。
+2. **全局权重污染**：点"优化 FSRS 参数"时，算法用全 revlog 算权重。假记录混进去，优化出的全局权重就是错的，影响所有卡。
+
+**唯一正当用途：从其他 SRS 软件迁移历史数据**（Quizlet/Memrise/SuperMemo → Anki，希望 FSRS 接着之前的进度而不是从零开始）。即便如此也要：
+- 先备份 collection
+- 先在测试牌组验几条，确认读得回来
+- 灌完抽查几张卡，看 FSRS 给的间隔是否合理（而不是异常长）
+
+本 Skill 默认不调用此 action，除非用户明确要求迁移历史复习数据。
 
 ---
 
