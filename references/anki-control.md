@@ -101,7 +101,7 @@ curl -s -X POST http://localhost:8765 -d '{"action":"version","version":6}'
 | 🟡 `deckNamesAndIds` <!-- unchecked --> | 牌组名 + ID（比 deckNames 更全） | — |
 | 🟡 `deckNameFromId` <!-- unchecked --> | deckId → name | — |
 | 🟡 `getDecks` <!-- unchecked --> | 查 cardId 属于哪些 deck | — |
-| 🟡 `deleteDecks` <!-- unchecked --> | 删牌组（**cardsToo 参数**） | — |
+| ✅ `deleteDecks` | 删牌组（**Anki 2.1.28+ 强制 cardsToo:true**） | — |
 | 🟡 `setDeckConfigId` <!-- unchecked --> | 给牌组换配置组 | — |
 
 ### 模型/模板（Model）
@@ -147,8 +147,8 @@ curl -s -X POST http://localhost:8765 -d '{"action":"version","version":6}'
 |---|---|---|
 | ✅ `getNumCardsReviewedToday` | 今日复习总数 | 整数 |
 | ✅ `getCollectionStatsHTML` | 完整统计页 HTML（含图表） | HTML 字符串 |
-| 🟡 `getNumCardsReviewedByDay` <!-- unchecked --> | **按天列复习数（看趋势）** | 数组 |
-| 🟡 `cardReviews` <!-- unchecked --> | **取某时间点后所有复习记录（评估核心）** | — |
+| ✅ `getNumCardsReviewedByDay` | **按天列复习数（看趋势）** | `[[日期, 数量], ...]` 全库所有有记录的天 |
+| ✅ `cardReviews` | **取某 deck 在某时间点后的复习记录（评估核心）** | revlog 记录数组 |
 | 🟡 `getReviewsOfCards` <!-- unchecked --> | **取卡片完整复习历史** | — |
 | 🟡 `getLatestReviewID` <!-- unchecked --> | 最新复习时间戳 | — |
 | 🟡 `insertReviews` <!-- unchecked --> | 插入复习记录（**慎用，影响数据**） | — |
@@ -302,21 +302,21 @@ curl -s -X POST http://localhost:8765 -d '{
 # → [[-1200, -1800, 5, 6, 9]]  （负数=分钟，正数=天）
 ```
 
-### 模板 7：复习历史与趋势评估 <!-- unchecked -->
-
-> 以下 action 均标 🟡，调用前先验证 schema。
+### 模板 7：复习历史与趋势评估
 
 ```bash
-# 近 N 天每天的复习量（看学习连贯性/趋势）
+# 全库每天的复习量（看学习连贯性/趋势）——注意：无参数，返回所有有记录的天
 curl -s -X POST http://localhost:8765 -d '{
-  "action":"getNumCardsReviewedByDay","version":6,"params":{"days":30}
+  "action":"getNumCardsReviewedByDay","version":6,"params":{}
 }'
+# 返回：[["2026-08-10", 14], ["2026-08-08", 3], ...]  按日期降序
 
-# 取某 deck 在某时间点之后的所有复习记录（算保留率/失败率的核心数据）
+# 取某 deck 在某时间点之后的复习记录（算保留率/失败率的核心数据）
 curl -s -X POST http://localhost:8765 -d '{
   "action":"cardReviews","version":6,
-  "params":{"deck":"Skills","startID":<unix时间戳>}
+  "params":{"deck":"Skills","startID":<毫秒级unix时间戳>}
 }'
+# 注意：startID 是毫秒级（不是秒）。若返回空，可能该 deck 还没卡被复习过（用 findCards "reviewed:N" 验证）
 
 # 取一批卡片的完整复习历史（比 cardReviews 更聚焦）
 curl -s -X POST http://localhost:8765 -d '{
@@ -366,9 +366,9 @@ curl -s -X POST http://localhost:8765 -d '{
 
 ---
 
-## 三坑
+## 四坑
 
-这三个坑都来自实测，每个都有明确的防御方法。
+这四个坑都来自实测，每个都有明确的防御方法。
 
 ### 坑 1：LLM 幻觉 action 名
 
@@ -413,6 +413,21 @@ curl -s -X POST http://localhost:8765 -d '{
 
 **写完必读回验证**——这一步不能省，是防静默失败的唯一手段。
 
+### 坑 4：deleteDecks 必须带 cardsToo:true
+
+Anki 2.1.28+ 起，`deleteDecks` 如果传 `cardsToo:false` 会报错：`"it's not possible to delete decks without deleting cards as well"`。即**删牌组必须连带删里面的卡**。
+
+**防御**：删牌组永远带 `cardsToo:true`。如果只想删空牌组（卡已先用 `deleteNotes` 删掉），也照样传 `true`——此时牌组里已经没卡，不会误删。
+
+```bash
+curl -s -X POST http://localhost:8765 -d '{
+  "action":"deleteDecks","version":6,
+  "params":{"decks":["__test__"],"cardsToo":true}
+}'
+```
+
+> 想保留卡、只移走它们？用 `changeDeck` 先把卡移到别的牌组，再 `deleteDecks`。
+
 ---
 
 ## FSRS 边界
@@ -451,8 +466,8 @@ curl -s -X POST http://localhost:8765 -d '{
 | 难度分布 | 全卡 ease factor | `getEaseFactors`（需配合 findCards 取 cardId） | ✅ |
 | 完整统计页 | 图表 HTML | `getCollectionStatsHTML` | ✅ |
 | 当前保留率设置 | desiredRetention | `getDeckConfig` | ✅ |
-| 近 N 天复习量趋势 | 每日复习数数组 | `getNumCardsReviewedByDay` | 🟡 <!-- unchecked --> |
-| 某 deck 的完整复习记录 | 单次复习记录（含答对率） | `cardReviews` | 🟡 <!-- unchecked --> |
+| 近 N 天复习量趋势 | 每日复习数数组（全库所有有记录的天） | `getNumCardsReviewedByDay` | ✅ |
+| 某 deck 的完整复习记录 | 单次复习记录（含答对率） | `cardReviews` | ✅ |
 | 某卡的完整复习历史 | 该卡所有历史 | `getReviewsOfCards` | 🟡 <!-- unchecked --> |
 
 调控学习计划（不只读，直接改）：
