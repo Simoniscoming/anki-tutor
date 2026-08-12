@@ -1,4 +1,4 @@
-# anki-cards
+# anki-tutor
 
 一个 Skill：把文本 / 笔记 / 代码 / 公式 / 图片拆成高质量的原子 Anki 闪卡，预览确认后写入 Anki。
 
@@ -23,26 +23,26 @@
 
 ## 安装 Skill
 
-把仓库 clone 到你 agent 约定的 skills 目录。**clone 时显式指定目标目录名为 `anki-cards`**（与 skill 名一致，避免混乱）：
+把仓库 clone 到你 agent 约定的 skills 目录。**clone 时显式指定目标目录名为 `anki-tutor`**（与 skill 名一致，避免混乱）：
 
 ### Claude Code
 
 ```bash
 # 项目级（仅当前项目可用）
-git clone https://github.com/Simoniscoming/HiTutor.git .claude/skills/anki-cards
+git clone https://github.com/Simoniscoming/anki-tutor.git .claude/skills/anki-tutor
 
 # 全局（所有项目可用）
-git clone https://github.com/Simoniscoming/HiTutor.git ~/.claude/skills/anki-cards
+git clone https://github.com/Simoniscoming/anki-tutor.git ~/.claude/skills/anki-tutor
 ```
 
 ### ZCode
 
 ```bash
 # 用户级（所有项目可用）
-git clone https://github.com/Simoniscoming/HiTutor.git ~/.agents/skills/anki-cards
+git clone https://github.com/Simoniscoming/anki-tutor.git ~/.agents/skills/anki-tutor
 
 # 项目级（仅当前项目可用）
-git clone https://github.com/Simoniscoming/HiTutor.git .agents/skills/anki-cards
+git clone https://github.com/Simoniscoming/anki-tutor.git .agents/skills/anki-tutor
 ```
 
 > Windows 上 `~` 即 `C:\Users\<你的用户名>`。
