@@ -1,7 +1,7 @@
 ---
 name: anki-cards
 version: 0.1.0
-description: 把文本/笔记/代码/公式/图片拆成高质量 Anki 闪卡并写入 Anki。当用户说"做成 anki 卡片""加进 anki""做个 flashcard""帮我背这个""这段老记不住""这个会考""记到 anki 里""make anki cards""turn this into flashcards"时使用。即使用户没直接说"anki"或"卡片"，只要流露出明确的记忆意图——比如贴代码/公式/术语说"老是忘""怕忘""考试要考""想记牢"——也触发。贴文本默认走拆卡流程，支持自然语言（"光合作用的反应物"→自动拆卡）。不负责纯复习调度、删卡、Anki 报错排查。
+description: 把文本/笔记/代码/公式/图片拆成高质量 Anki 闪卡并写入 Anki。当用户说"做成 anki 卡片""加进 anki""做个 flashcard""帮我背这个""这段老记不住""这个会考""记到 anki 里""make anki cards""turn this into flashcards"时使用。即使用户没直接说"anki"或"卡片"，只要流露出明确的记忆意图——比如贴代码/公式/术语说"老是忘""怕忘""考试要考""想记牢"——也触发。贴文本默认走拆卡流程，支持自然语言（"光合作用的反应物"→自动拆卡）。不负责纯复习调度、删卡、Anki 报错排查。另：诊断和优化 Anki 学习状况也是本 Skill 职责。当用户想看自己学得怎么样、retention 偏低或掉了、复习太多扛不住、哪些卡老记不住或该删时使用——即使用户没说"诊断"或"retention"，只要流露出"想看自己的 Anki 表现 / 想优化复习"的意图也触发（读复习日志→算保留率→给建议，只读不改）。
 ---
 
 # Anki 制卡助手
@@ -18,6 +18,11 @@ description: 把文本/笔记/代码/公式/图片拆成高质量 Anki 闪卡并
 - **用户提供图片**（截图、图表、手写笔记、示意图、公式照片），想把图嵌进卡片或从图识别内容制卡
 
 即使用户没明说"制卡"，只要意图是"把这段内容固化成可复习的知识点"，也应触发。
+
+**教练层触发**（除制卡外，本 Skill 还管诊断与配置）：
+
+- **诊断**（自动触发）：用户问"看看我的 retention""最近忘得多""复习扛不住""哪些卡该删"——读 `references/retention-coaching.md` 诊断
+- **配置**（顺带处理）：用户表露目标"考研""学日语""复习太多了"——读 `references/recipes.md` 给配方
 
 ## 何时不使用（交给别的工具，别抢活）
 
@@ -104,6 +109,9 @@ description: 把文本/笔记/代码/公式/图片拆成高质量 Anki 闪卡并
 | 图当卡片答案（解剖图/示意图等） | 图文嵌入：storeMediaFile 传图 + 字段写 `<img>` | image-input.md（路径A） |
 | 图是制卡原料（教材照片/截图） | 多模态识别转文本，再走拆卡 | image-input.md（路径B） |
 | 想要图片遮挡（Image Occlusion） | 非必要不推荐，说明现状并引导用插件 | image-input.md（路径C） |
+| 问学习状况 / retention / 复习超载 | 拉 revlog 诊断 → 给"现象→建议" | retention-coaching.md |
+| 表露学习目标（考研·语言·编程·考证） | 推荐配方 → 预览 → 确认后 saveDeckConfig | recipes.md |
+| 考试倒计时 | 日历反推算新卡量 → B 速通配方 | recipes.md |
 
 ## 防护红线
 
@@ -134,6 +142,14 @@ description: 把文本/笔记/代码/公式/图片拆成高质量 Anki 闪卡并
 如果要用 `updateNoteFields` 修改已有卡片，先提醒用户："如果你正在 Anki 浏览器里查看这张卡，请先关掉或切到别的卡。"
 
 为什么：这是 AnkiConnect 的上游 bug——同时浏览和修改同一张卡会导致修改静默失败（不报错但没生效）。v1 主要做新建卡，这条主要为以后的改卡功能预留，但先养成提醒的习惯。
+
+### 5. 教练层红线——诊断只读，配置走确认
+
+诊断（retention-coaching.md）全程**只读**：只拉复习日志、给建议，不主动调 FSRS、不删卡、不挂起。用户点名要改时，才路由到 recipes.md。
+
+应用任何 FSRS 配方（desiredRetention / 最大间隔 / 每日新卡量）前，必须**预览变更 + 用户确认**，再 `saveDeckConfig`，写回后读回验证（同坑3）。
+
+为什么：诊断和配置都是改用户"记忆系统"的敏感操作。诊断只读保证不误伤数据；配置走确认制和制卡同一个道理——FSRS 参数错了会让整库调度失真，比一张错卡危害更大。**绝不手调 fsrsWeights**（那 17 个权重靠 Anki 的 Optimize，手调 = 污染算法。且有实证支撑——FSRS Issue #215 显示分牌组单独优化权重无收益，全局一套权重即可）。
 
 ## 字段/标签/牌组默认
 
@@ -172,10 +188,22 @@ description: 把文本/笔记/代码/公式/图片拆成高质量 Anki 闪卡并
 | 模型不存在 | 用 `modelNames` 核对，或问用户用哪个 |
 | 连接失败 | 让用户检查 Anki 是否开着 |
 
-## 未来扩展（v1 不实现，但结构已预留）
+## 教练层（已实现：Tier 1+2）
 
-以下三个方向目前不实现，但 References 结构已留接口，未来加对应文件即可：
+本 Skill 在制卡之外，已支持帮用户搭并优化记忆系统：
+
+- **Tier 1 配置**（`references/recipes.md`）：按人群目标（长期/速通/减压维护/技术/生活）推荐 FSRS 配方，预览确认后写入
+- **Tier 2 诊断**（`references/retention-coaching.md`）：读复习日志算实际保留率，按决策树给优化建议，全程只读
+
+诊断自动触发（见 description）；配置在制卡/诊断对话中顺带处理。两层都走 curl + AnkiConnect，零新依赖。
+
+## 未来扩展（尚未实现）
+
+以下方向目前不实现，但 References 结构已留接口：
+
+- **young/mature 子集分层 DR**：理论上更优的调度（FSRS 作者论文 Figure 9c：最优保留率随记忆成熟度升高、随难度降低——新卡/难卡低保留、熟卡/易卡趋近 100%）。诊断层未来可建议把某牌组拆 young/mature 子牌、各设 DR。当前仅记一笔，不做。
 
 - **文件路径输入**：读本地 md/txt/pdf/docx 制卡（未来加 `references/file-input.md`）
 - **主题生成**：针对某主题基于 AI 自身知识生成卡片（未来加 `references/topic-generation.md`）
 - **改进现有卡片**：从已有牌组找卡来拆分/优化（未来加 `references/improve-existing.md`）
+- **Tier 3 ML 自动优化**：拉 revlog → `fsrs-optimizer`（Python）训练 → 写回 fsrsWeights（未来加 `references/fsrs-optimize.md`）。opt-in，因 Anki 自带 Optimize 按钮，本路径仅给想自动化/跨设备的极客。注：Anki 24.04+ 已内置最优保留率计算（GUI），但 AnkiConnect 读不到；且 25.02 的「计算最低建议保留率」按钮当前不可靠（常返回 0.70，见 FSRS Issue #694），故本 Skill 不以之为基准。
