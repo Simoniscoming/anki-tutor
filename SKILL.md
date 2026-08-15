@@ -207,8 +207,4 @@ description: 把文本/笔记/代码/公式/图片拆成高质量 Anki 闪卡并
 
 - **young/mature 子集分层 DR**：理论上更优的调度（FSRS 作者论文 Figure 9c：最优保留率随记忆成熟度升高、随难度降低——新卡/难卡低保留、熟卡/易卡趋近 100%）。诊断层未来可建议把某牌组拆 young/mature 子牌、各设 DR。当前仅记一笔，不做。
 
-- **文件路径输入**：读本地 md/txt/pdf/docx 制卡（未来加 `references/file-input.md`）
-- **主题生成**：针对某主题基于 AI 自身知识生成卡片（未来加 `references/topic-generation.md`）
-- **改进现有卡片**：从已有牌组找卡来拆分/优化（未来加 `references/improve-existing.md`）
-
 > 原「Tier 3 ML 自动优化」已实现，见上方教练层 Tier 3 + `references/fsrs-optimize.md`。配套插件方案替代了原设想的 Python fsrs-optimizer 路径，零外部依赖。

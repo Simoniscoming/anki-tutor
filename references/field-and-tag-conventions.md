@@ -40,8 +40,6 @@
 | 标签 | 含义 |
 |---|---|
 | `source::chat` | 聊天里贴的文本 |
-| `source::file` | 从文件来的（未来扩展） |
-| `source::topic-gen` | AI 基于主题生成的（未来扩展） |
 | `source::image` | 从图片识别来的 |
 
 ### 2. 主题标签 `topic::*`
