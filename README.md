@@ -36,6 +36,8 @@
 1. **Anki 桌面端**（开着，因为要写库）
 2. **AnkiConnect 插件**（在 Anki 里安装，默认监听 `http://localhost:8765`）
 
+> **可选**：`fsrs_bridge` 插件（解锁 FSRS 全自动优化）。装的是本仓库自带的 `plugin/fsrs_bridge`——agent 检测到没装时会自动复制安装，你只需重启 Anki；自动失败才需手动，见 `plugin/fsrs_bridge/README.md`。不装则 FSRS 优化降级为 GUI 手动指引。
+
 > **可选**：Python 3.7+。启用 `scripts/anki_probe.py` 后，查重、诊断采集、空牌组扫描这些只读操作由脚本一次跑完（防编码坑、防误建空牌组）。没装 Python 则自动降级为 curl 手工流程，功能不缺。
 
 > **不需要 MCP。** 本 Skill 通过 curl 直接调用 AnkiConnect 的 HTTP 接口，不依赖任何外部 MCP server。详见 `references/anki-control.md`。

@@ -24,7 +24,30 @@
 本文件的能力依赖 **fsrs_bridge 插件**（装在 `addons21/fsrs_bridge`，端口 **8766**），与 AnkiConnect（8765）共存。这是本 Skill 唯一依赖配套插件的环节——别的 reference 全是纯 curl 调 AnkiConnect。
 
 - **插件在** → 全自动闭环，全程不让用户碰 Anki 界面
-- **插件没装 / 没起** → **降级**：指引用户在 GUI 手动操作（优化点 Optimize 按钮、FSRS 开关在 deck options）。不强求装插件，但说一句"装了 fsrs_bridge 我可以全自动帮你做"
+- **插件没装** → **先自动安装**（agent 自己动手，见下「自动安装 fsrs_bridge」），装好后请用户重启 Anki，再打 8766 验证
+- **自动安装失败 / 重启后仍无响应** → **降级**：指引用户在 GUI 手动操作（优化点 Optimize 按钮、FSRS 开关在 deck options）。不强求装插件，但说一句"装了 fsrs_bridge 我可以全自动帮你做"
+
+### 自动安装 fsrs_bridge（先动手，失败再降级）
+
+8766 连不上 ≠ 一定没装（也可能只是没重启）。自动安装是幂等的——目标目录已存在就跳过不覆盖，所以放心直接走：
+
+1. **定位 addons21**（按平台探测，存在即命中）：
+   - Windows：`%APPDATA%\Anki2\addons21`
+   - macOS：`~/Library/Application Support/Anki2/addons21`
+   - Linux：`~/.local/share/Anki2/addons21`，另探 Flatpak 变体 `~/.var/app/net.ankiweb.Anki/data/Anki2/addons21`
+   - 多个候选同时存在 → 优先选里面有 `2055492159`（AnkiConnect）的那个，那是用户真实在用的 Anki
+2. **复制**：把本 Skill 自带的 `plugin/fsrs_bridge/` 整个文件夹复制为 `addons21/fsrs_bridge`（文件夹名保持下划线原样，不能改）。Anki 开着复制也没事，重启后才生效。端口被占时预写插件 `config.json` 的 `"port"`（默认 8766，不用改代码）。
+3. **告知 + 验证**：说一句"插件已装好，请重启 Anki"；重启后打 `fsrsStatus` 确认 8766 活了；不通先看下面「状态自报」排障，回到全自动闭环。
+4. **找不到 addons21 / 复制失败 / 重启后仍无响应** → 降级：GUI 手动指引 + 让用户照 `plugin/fsrs_bridge/README.md` 手动装（里面有 View Files 万能入口，任何系统都适用）。
+
+### 状态自报（排障第一步）
+
+Windows GUI 下插件的 print 完全不可见（Anki 的 logs/ 也不收），bridge 起没起来只能靠它自己落盘（插件 v2 起自带）：
+
+- `addons21/fsrs_bridge/bridge-status.json` —— `{"started": true/false, "port": ..., "error": ...}`
+- `addons21/fsrs_bridge/bridge-debug.log` —— 加载链条分段日志（import → hook 注册 → 读 config → listening）
+
+8766 连不上时先读这两个文件再动手：`started:false` 带 error 就是根因（端口被占 / config 损坏）；**连文件都不存在 = 插件压根没被 Anki 加载**（查文件夹位置和名字）。
 
 调用方式同 AnkiConnect（JSON-RPC，打 8766）：
 
@@ -43,6 +66,8 @@ curl -s http://localhost:8766 -d '{"action":"fsrsOptimize","version":6,"params":
 | `fsrsOptimize` | 算新权重（预览）| 否（只算不写）|
 | `fsrsApply` | 应用优化（写回权重 + 可选重排卡片）| **是** |
 | `fsrsSetEnabled` | 开 / 关 FSRS 总开关 | **是**（影响全库）|
+
+> 带 `deck` 参数的 action，牌组名**必须来自 `deckNames` 的返回**且已存在：插件 v2 起查不到直接报错；旧版会静默创建空牌组（anki-control.md 坑 6 同类 bug），遇到旧版行为先提醒升级插件。
 
 ### curl 速查
 
@@ -208,7 +233,7 @@ recipes.md「绝不手调 fsrsWeights」红线，现在有**一个合法例外**
 - `fsrsSetEnabled` / `fsrsApply` 执行前**必须用户确认**（影响全库）。和制卡写入、改配置同级。
 - `fsrsStatus` / `fsrsOptimize` 只读，可自动跑不用问。
 - **绝不手调 fsrsWeights**（那串数字）。更新权重只走 `fsrsApply`（Anki 内置算法）。
-- 依赖配套插件。插件没装 → 降级为 GUI 指引，不强求。
+- 依赖配套插件。插件没装 → agent 先自动安装（见「前置」），失败才降级为 GUI 指引，不强求。
 - 优化后**默认不重排**（温和）。用户明确要重排才传 `fsrsReschedule=true`。
 - 数据 **< 1000 条不应用优化**（参数不稳），只提示"再攒攒"。
 - 写日志紧跟执行成功之后，不脱节（同 intent-persistence.md 精神）。

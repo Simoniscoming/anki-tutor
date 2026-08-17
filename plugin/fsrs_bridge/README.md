@@ -10,12 +10,24 @@ AnkiConnect 的 126 个 action 里没有 optimize / reschedule（已用 `apiRefl
 
 ## 安装
 
-1. 把整个 `fsrs_bridge` 文件夹复制到 Anki 的 addons21 目录：
-   - **Windows**: `%APPDATA%\Anki2\addons21\`
-   - **macOS**: `~/Library/Application Support/Anki2/addons21/`
-   - **Linux**: `~/.local/share/Anki2/addons21/`
-2. 重启 Anki 桌面端。
-3. 打开任意 profile 后，Anki 的控制台会打印 `[fsrs_bridge] listening on http://127.0.0.1:8766`。
+### 方式一：agent 自动装（推荐）
+
+配合 anki-tutor Skill 使用时**通常不用手动装**：agent 检测到 8766 无响应，会自动把本目录复制进你的 addons21，你只需重启一次 Anki。自动装失败才走方式二。
+
+### 方式二：手动装
+
+**第 0 步（推荐，任何系统通用）**：Anki 主界面 工具 → 插件（Tools → Add-ons）→ 查看文件（View Files），文件管理器会直接打开你的 addons21 文件夹——改过 Anki 数据目录、Flatpak 版等任何情况都适用。
+
+把整个 `fsrs_bridge` 文件夹复制进去。找不到 View Files 时按系统手动定位：
+
+- **Windows**: `%APPDATA%\Anki2\addons21\`
+- **macOS**: `~/Library/Application Support/Anki2/addons21/`（Library 默认隐藏：Finder 按 `Cmd+Shift+G` 粘贴路径前往）
+- **Linux**: `~/.local/share/Anki2/addons21/`；Flatpak 版为 `~/.var/app/net.ankiweb.Anki/data/Anki2/addons21/`
+
+然后：
+
+1. 重启 Anki 桌面端。
+2. 打开任意 profile 后，Anki 的控制台会打印 `[fsrs_bridge] listening on http://127.0.0.1:8766`。
 
 > 文件夹名必须是 `fsrs_bridge`（下划线），不能含连字符——Python 包名限制，否则 `from .web import` 会失败。
 
@@ -26,7 +38,7 @@ AnkiConnect 的 126 个 action 里没有 optimize / reschedule（已用 `apiRefl
 
 ## API 契约
 
-所有请求 POST 到 `http://localhost:8766`，JSON-RPC 风格，与 AnkiConnect 调用方式一致：
+所有请求 POST 到 `http://localhost:8766`（端口由插件 `config.json` 的 `port` 决定，默认 8766），JSON-RPC 风格，与 AnkiConnect 调用方式一致：
 
 ```
 {"action": "<action>", "version": 6, "params": {...}}
@@ -46,7 +58,7 @@ curl -s http://localhost:8766 -d '{"action":"fsrsStatus","version":6,"params":{"
  "error": null}
 ```
 
-不给 `deck` 则只返回全局调度器状态。
+不给 `deck` 则只返回全局调度器状态。`deck` 必须是已存在的牌组名（来自 deckNames）——查不到会报错（v2 起如此；旧版会静默创建空牌组，属 bug 已修）。
 
 ### fsrsOptimize —— 只算权重，不写库不重排
 
@@ -90,10 +102,10 @@ curl -s http://localhost:8766 -d '{"action":"fsrsApply","version":6,"params":{"d
 
 | 现象 | 原因 / 处理 |
 |---|---|
-| 连接被拒 | 插件没加载：确认文件夹在 addons21、Anki 已重启、控制台有 listening 日志 |
+| 连接被拒 | 先读本目录 `bridge-status.json`（started/port/error）：`started:false` 看 error 定位（端口被占等）；文件不存在 = 插件没被 Anki 加载，确认文件夹在 addons21、Anki 已重启；加载链条细节看 `bridge-debug.log` |
 | `unsupported action` | action 名拼错，或请求没走 `/` 根路径 |
 | `需要 Anki >= 24.0` | 升级 Anki |
-| 8766 端口被占 | 改 `__init__.py` 的 `PORT` |
+| 8766 端口被占 | 改本插件 `config.json` 的 `"port"`（工具 → 插件 → fsrs_bridge → 配置，或直接编辑 `addons21/fsrs_bridge/config.json`），重启 Anki |
 | fsrsApply 期间 GUI 卡住 | 正常（主线程优化），等几十秒；原生 GUI 优化也一样 |
 
 ## 设计说明

@@ -223,7 +223,7 @@ python <skill目录>/scripts/anki_probe.py collect --deck "AI工程化" --days 3
 | 🟡 `guiDeckReview` <!-- unchecked --> | 开始复习某牌组 |
 | 🟡 `guiImportFile` <!-- unchecked --> | 打开导入对话框 |
 | 🟡 `guiCheckDatabase` <!-- unchecked --> | 检查数据库 |
-| 🟡 `guiExitAnki` <!-- unchecked --> | 关闭 Anki |
+| ✅ `guiExitAnki` | 关闭 Anki。**实测 2026-08-17：返回成功 ≠ 已退出**——内部只是 1 秒后调 `mw.close()`，被备份/弹窗/托盘拦截就永远不退。关 Anki 必须梯度：guiExitAnki → 等 15 秒并确认进程 → 按 PID 发 WM_CLOSE → 再确认 → 才 force kill。**每一步都要验证进程真退了再进下一步**（沙箱实测两次都靠 WM_CLOSE 补刀） |
 | 🟡 `guiPlayAudio` <!-- unchecked --> | 播放音频 |
 | 🟡 `guiReviewActive` <!-- unchecked --> | 是否在复习中 |
 
@@ -507,6 +507,8 @@ Anki 2.1.28+ 起，`deleteDecks` 如果传 `cardsToo:false` 会报错：`"it's n
 
 **防御**：删牌组永远带 `cardsToo:true`。如果只想删空牌组（卡已先用 `deleteNotes` 删掉），也照样传 `true`——此时牌组里已经没卡，不会误删。
 
+**参数阴坑（2026-08-17 实测）**：`decks` 收的是**牌组名字符串数组**，不是 deckId——传 id 会返回 `{"result":null,"error":null}`，**看似成功、实际什么都没删**（最危险的静默成功）。参数名也是驼峰：`cardsToo`（`cards_too`、`deck_ids` 都会报 unexpected keyword）。删完读回 `deckNames` 验证真的没了。
+
 ```bash
 curl -s -X POST http://localhost:8765 -d '{
   "action":"deleteDecks","version":6,
@@ -544,6 +546,8 @@ curl -s -X POST http://localhost:8765 -d '{
 2. 记住 `cardReviews` 只匹配**精确名**（不含子牌组，见模板7注释）；`getDeckStats`/`findCards` 的 deck 匹配**含子牌组**——三者语义不同，别混用互验。
 3. 诊断/看板流程跑完后如果怀疑产生了空壳，用 `findCards "deck:X"` 数卡数确认（0 卡 + 名字不在预期内 = 空壳），经用户确认后 `deleteDecks cardsToo:true` 清理（空壳无数据，零风险）。
 4. 判定空壳来源：牌组 ID 本身是创建时刻的毫秒时间戳（`getDeckStats` 返回的 key），能直接看出是什么时候、哪次会话建出来的。**例外**：内置默认牌组 ID 恒为 1、不具时间戳语义，且 getDeckStats 可能不返回它——溯源显示 `?` 属正常，该牌组不可删。
+
+> 同类坑在配套插件 fsrs_bridge 也中过招（2026-08-17 实测）：旧版 `fsrsStatus` 用同样的 `decks.id()`，查不存在的牌组会静默建空牌组。插件 v2 已改 `by_name()` 只查不建（查不到直接报错）——给 `fsrsStatus` 传的牌组名同样**必须来自 deckNames**，详见 fsrs-optimize.md。
 
 ---
 

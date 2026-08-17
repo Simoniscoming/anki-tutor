@@ -31,10 +31,12 @@ def _require_min_version():
 
 
 def _deck_id(name):
-    did = mw.col.decks.id(name)
-    if not did:
+    # by_name 只查不建：decks.id() 是 get-or-create，会让"读"操作凭空建牌组
+    # （实测：对不存在的牌组调 fsrsStatus 会在用户库里创建同名空牌组）
+    deck = mw.col.decks.by_name(name)
+    if not deck:
         raise RuntimeError(f"找不到牌组：{name}")
-    return did
+    return deck["id"]
 
 
 def fsrs_status(req):

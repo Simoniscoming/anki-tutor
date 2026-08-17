@@ -39,7 +39,7 @@ description: 把文本/笔记/代码/公式/图片拆成高质量 Anki 闪卡并
 2. **AnkiConnect 插件已启用**（默认监听 `http://localhost:8765`）
 3. **可选加速**：Python 3.7+（跑 `scripts/anki_probe.py`，只读操作优先用它；没装自动降级 curl 模板，功能不缺）
 
-本 Skill **不依赖外部 MCP**。与 Anki 的交互分两条 curl 通道：① **AnkiConnect**（`http://localhost:8765`，制卡/诊断/配置用）；② **配套插件 fsrs_bridge**（`http://localhost:8766`，仅 Tier 3 自动优化用，没装则降级为 GUI 指引）。两者都是本地 HTTP + JSON-RPC。AnkiConnect 的 action 白名单、curl 模板、已知坑详见 `references/anki-control.md`——**调用前必读**；fsrs_bridge 详见 `references/fsrs-optimize.md`。
+本 Skill **不依赖外部 MCP**。与 Anki 的交互分两条 curl 通道：① **AnkiConnect**（`http://localhost:8765`，制卡/诊断/配置用）；② **配套插件 fsrs_bridge**（`http://localhost:8766`，仅 Tier 3 自动优化用，没装则 agent 自动安装、失败才降级为 GUI 指引）。两者都是本地 HTTP + JSON-RPC。AnkiConnect 的 action 白名单、curl 模板、已知坑详见 `references/anki-control.md`——**调用前必读**；fsrs_bridge 详见 `references/fsrs-optimize.md`。
 
 如果调 curl 时报连接错误，**先让用户检查 Anki 是否开着**，而不是盲目重试——99% 的连接失败都是 Anki 没开。
 
@@ -202,7 +202,7 @@ description: 把文本/笔记/代码/公式/图片拆成高质量 Anki 闪卡并
 
 - **Tier 1 配置**（`references/recipes.md`）：按人群目标（长期/速通/减压维护/技术/生活）推荐 FSRS 配方，预览确认后写入
 - **Tier 2 诊断**（`references/retention-coaching.md`）：读复习日志算实际保留率，按决策树给优化建议，全程只读。跑完自动产出 chat 摘要 + 自包含 HTML 看板（本地浏览器打开，云端降级为纯摘要），并落盘历史快照供将来趋势对比（`references/dashboard.md`）
-- **Tier 3 自动优化**（`references/fsrs-optimize.md`）：用配套插件 fsrs_bridge 全自动优化 FSRS 参数 + 开关 FSRS 总开关。诊断/制卡时顺带发现"该优化了"会提一句；执行前用户确认；执行后自动记 optimize-log.json。**唯一依赖配套插件的环节**（8766），没装则降级为 GUI 指引
+- **Tier 3 自动优化**（`references/fsrs-optimize.md`）：用配套插件 fsrs_bridge 全自动优化 FSRS 参数 + 开关 FSRS 总开关。诊断/制卡时顺带发现"该优化了"会提一句；执行前用户确认；执行后自动记 optimize-log.json。**唯一依赖配套插件的环节**（8766），没装则 agent 自动安装、失败降级 GUI 指引
 
 诊断自动触发（见 description）；配置在制卡/诊断对话中顺带处理。Tier 1+2 走 curl + AnkiConnect，零新依赖；Tier 3 需配套插件。
 

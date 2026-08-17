@@ -6,3 +6,15 @@ desktop.ini
 # 编辑器
 .vscode/
 *.swp
+
+# Python
+__pycache__/
+*.pyc
+
+# 本机测试脚手架，不随仓库分发（含硬编码本机路径）
+dev/
+
+# fsrs_bridge 运行时状态自报（装到 addons21 后才产生，不该进源码库）
+bridge-status.json
+bridge-debug.log
+
