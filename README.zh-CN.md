@@ -67,7 +67,21 @@
 
 ## 安装
 
-**一句话安装**（推荐，需要 Node.js）：
+三种方式**任选其一**即可，不需要都做：
+
+### 方式一：在你的 agent 里一句话安装（最简单）
+
+Claude Code、Codex、ZCode、DeepSeek 等任意支持 Skill 和终端的 agent 工具，对话框里直接说：
+
+```
+帮我安装这个 skill：https://github.com/Simoniscoming/anki-tutor
+```
+
+agent 会自动把它装到正确的目录，**开个新会话**即生效。
+
+### 方式二：在终端里执行一条命令（需要 Node.js）
+
+打开终端（PowerShell / bash 均可），执行：
 
 ```bash
 npx skills add Simoniscoming/anki-tutor
@@ -75,9 +89,11 @@ npx skills add Simoniscoming/anki-tutor
 
 > 用的社区通用工具 [skills.sh](https://skills.sh)，认 SKILL.md 规范的 agent 基本都支持，会自动装到对应目录；加 `-g` 装到全局。
 
-**手动 clone**（不想装 Node 就用这个）。clone 到你 agent 约定的 skills 目录，**目录名保持 `anki-tutor`**（与 skill 名一致，避免混乱）：
+### 方式三：Git 克隆安装（纯手动，不依赖 Node 和 npx）
 
-### Claude Code
+把仓库 clone 到你 agent 约定的 skills 目录，**目录名保持 `anki-tutor`**（与 skill 名一致，避免混乱）：
+
+#### Claude Code
 
 ```bash
 # 项目级（仅当前项目可用）
@@ -87,7 +103,7 @@ git clone https://github.com/Simoniscoming/anki-tutor.git .claude/skills/anki-tu
 git clone https://github.com/Simoniscoming/anki-tutor.git ~/.claude/skills/anki-tutor
 ```
 
-### ZCode
+#### ZCode
 
 ```bash
 # 用户级（所有项目可用）
@@ -100,7 +116,7 @@ git clone https://github.com/Simoniscoming/anki-tutor.git .agents/skills/anki-tu
 > Windows 上 `~` 即 `C:\Users\<你的用户名>`。
 > 同名 Skill 下，项目级会覆盖用户级。可据此做"用户级稳定版 + 项目级实验版"双轨。
 
-### 其它兼容 SKILL.md 的 agent
+#### 其它兼容 SKILL.md 的 agent
 
 放进你 agent 约定的 skills 目录即可（具体路径查你 agent 的文档）。
 

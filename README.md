@@ -1,6 +1,6 @@
 # anki-tutor
 
-[English](README.md) | [中文](README.zh-CN.md)
+[English](README.md) | [Chinese](README.zh-CN.md)
 
 Turn any content into high-quality Anki flashcards — and coach your learning plan along the way, tuning it into the "forgetting curve" that fits you best.
 
@@ -67,7 +67,21 @@ Scripts and add-on sources are all bundled — you only need the runtime:
 
 ## Install
 
-**One-liner** (recommended, requires Node.js):
+Pick **one** of the three ways below — you don't need all of them:
+
+### Option 1: One sentence inside your agent (easiest)
+
+In any agent that supports skills and terminal access — Claude Code, Codex, ZCode, DeepSeek, etc. — just say in the chat:
+
+```
+Install this skill for me: https://github.com/Simoniscoming/anki-tutor
+```
+
+The agent installs it into the right directory; start a **new session** and it takes effect.
+
+### Option 2: One command in the terminal (requires Node.js)
+
+Open a terminal (PowerShell or bash) and run:
 
 ```bash
 npx skills add Simoniscoming/anki-tutor
@@ -75,9 +89,11 @@ npx skills add Simoniscoming/anki-tutor
 
 > Uses [skills.sh](https://skills.sh), the community-standard tool — supported by virtually every SKILL.md-compatible agent; it installs into the right directory automatically. Add `-g` for a global install.
 
-**Manual clone** (if you'd rather not install Node). Clone into your agent's skills directory and **keep the folder named `anki-tutor`** (same as the skill name, avoids confusion):
+### Option 3: Git clone (fully manual, no Node/npx needed)
 
-### Claude Code
+Clone the repo into your agent's skills directory and **keep the folder named `anki-tutor`** (same as the skill name, avoids confusion):
+
+#### Claude Code
 
 ```bash
 # Project-level (current project only)
@@ -87,7 +103,7 @@ git clone https://github.com/Simoniscoming/anki-tutor.git .claude/skills/anki-tu
 git clone https://github.com/Simoniscoming/anki-tutor.git ~/.claude/skills/anki-tutor
 ```
 
-### ZCode
+#### ZCode
 
 ```bash
 # User-level (all projects)
@@ -100,7 +116,7 @@ git clone https://github.com/Simoniscoming/anki-tutor.git .agents/skills/anki-tu
 > On Windows, `~` is `C:\Users\<your username>`.
 > A project-level skill overrides a same-named user-level one — handy for a "stable user-level + experimental project-level" setup.
 
-### Other SKILL.md-compatible agents
+#### Other SKILL.md-compatible agents
 
 Drop it into your agent's skills directory (check its docs for the exact path).
 
