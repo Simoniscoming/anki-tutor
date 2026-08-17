@@ -1,88 +1,120 @@
 # anki-tutor
 
-一个 Skill：把内容变成高质量 Anki 闪卡，也当你的间隔重复"教练"——造卡 + 诊断优化，一个搞定。
+[English](README.md) | [中文](README.zh-CN.md)
 
-## 为什么用它
+Turn any content into high-quality Anki flashcards — and coach your learning plan along the way, tuning it into the "forgetting curve" that fits you best.
 
-- **说句话就成卡。** 贴一段文本、代码、公式，甚至甩张截图，它自动拆成一张张原子闪卡，你点头就写进 Anki——从此告别逐张手敲。
-- **造卡不出错，三道闸把关。** 写入前先预览、先查重，拆卡遵循 SuperMemo 创始人的 Wozniak 法则。AI 再会幻觉，错卡也进不了你的脑子。
-- **它还是你的复习教练。** 读你的真实保留率，告诉你学得到底怎么样；更预测"每天加这么多新卡，几个月后复习会不会爆"——这种事 Anki 自己不会提醒你。
-- **诊断结果一键变看板。** 每次诊断自动生成一份自包含 HTML 看板（保留率对比、复习量趋势、leech 明细、建议动作），本地直接在浏览器打开；纯聊天环境自动降级为文字版摘要，不挑平台、可离线查看。
-- **FSRS 不用自己调，和 AI 聊目标就行。** 那些枯燥的调优参数全交给它——你说"考研还剩 100 天"，它就配好速通配方、反推每天该加多少新卡；还记着你的 deadline，不会把你刻意的"速通"劝退成"长期最优"。
-- **零依赖、多平台、改库永远你点头。** 不用装 MCP，Claude Code / ZCode / 任何认 SKILL.md 的 agent 都能跑；诊断全程只读，任何写入都要你确认——你的库，你做主。
+For exam crammers, med students, language learners, programmers… anyone who uses Anki but is tired of typing cards by hand or digging through scheduling parameters.
 
-## 怎么用
+## Why you'll like it
 
-在你的 agent 里直接说人话，三种意图它都认：
+- **Cards from plain words.** Paste text, code, or formulas — or drop in a screenshot — and it splits everything into atomic flashcards. One nod from you and they're in Anki. No more hand-typing cards one by one.
+- **Preview first, write later.** Every batch arrives as a preview table you check card by card; duplicates are flagged before anything is written; splitting follows Wozniak's rules — the SuperMemo founder's gold standard for card crafting. Not one card enters your deck without your nod.
+- **It keeps an eye on how you're doing.** Every diagnosis ends with an auto-generated HTML dashboard you can open right in your browser.
+- **FSRS without the fiddling — just talk about your goal.** Say "100 days until my exam" and it sets up a sprint recipe and back-computes how many new cards per day. It remembers your deadline, so it won't talk you out of your deliberate cramming in favor of "long-term optimal".
+- **Works out of the box, on any agent.** Runs on Claude Code, ZCode, or anything that speaks the SKILL.md convention. Diagnostics are strictly read-only; every write needs your confirmation — your deck, your call.
+
+## What it looks like
+
+Open your agent and just talk to it — all three intents are recognized:
 
 ```
-"把这段光合作用做成 anki 卡"       # 制卡
-"看看我最近的 retention 怎么样"     # 诊断
-"考研还剩 100 天，FSRS 怎么配"     # 配置
+"Turn this photosynthesis passage into anki cards"   # card making
+"I keep forgetting things lately, look into it"      # diagnosis
+"100 days until my exam, plan my review rhythm"      # configuration
 ```
 
-## 平台兼容
+The full card-making flow — the core experience is that **you can always hit the brakes**:
 
-本 Skill 是一份纯 markdown（遵循 `SKILL.md` frontmatter 约定），不绑定特定 agent。只要你的 agent 支持 SKILL.md 规范就能用，已在以下平台验证：
+![anki-tutor card flow: paste content → auto-split into atomic cards → confirm cards → you say OK → write to Anki](assets/flow-diagram-en.png)
 
-- **Claude Code**
-- **ZCode**
-- 其它兼容 SKILL.md 约定的 agent
+It previews the split as a table, and only writes after your nod:
 
-## 依赖
+```
+## Card preview (3 cards)
 
-这个 Skill 本身只是 markdown，但要真正写卡，需要以下运行环境：
+Target deck: Biology::Photosynthesis
+Note types: mixed
 
-1. **Anki 桌面端**（开着，因为要写库）
-2. **AnkiConnect 插件**（在 Anki 里安装，默认监听 `http://localhost:8765`）
+| # | Type | Front | Back | Tags | Why this card |
+|---|------|-------|------|------|---------------|
+| 1 | Basic | What are the reactants of photosynthesis? | CO₂ and H₂O | reactant | Explicit Q-A pair in the source |
+| 2 | Cloze | Photosynthesis converts light energy into {{c1::chemical energy}}, stored in {{c2::glucose}} | — | product | Key-term cloze; one passage, two cards |
+| 3 | Basic (rev) | What role does CO₂ play in photosynthesis? | Reactant (carbon source) | reactant | Reverse test to break direction dependence |
 
-> **可选**：`fsrs_bridge` 插件（解锁 FSRS 全自动优化）。装的是本仓库自带的 `plugin/fsrs_bridge`——agent 检测到没装时会自动复制安装，你只需重启 Anki；自动失败才需手动，见 `plugin/fsrs_bridge/README.md`。不装则 FSRS 优化降级为 GUI 手动指引。
+Reply `OK` to write; or say `#2 switch to Basic`, `delete #1`, `too fragmented, merge into 2`.
+Duplicate matches are flagged ⚠ with a side-by-side comparison — skip / update / create anyway is your call.
 
-> **可选**：Python 3.7+。启用 `scripts/anki_probe.py` 后，查重、诊断采集、空牌组扫描这些只读操作由脚本一次跑完（防编码坑、防误建空牌组）。没装 Python 则自动降级为 curl 手工流程，功能不缺。
+⏸ Nothing is written to Anki until you confirm.
+```
 
-> **不需要 MCP。** 本 Skill 通过 curl 直接调用 AnkiConnect 的 HTTP 接口，不依赖任何外部 MCP server。详见 `references/anki-control.md`。
+After writing you get a report: `✓ N added → deck name`, `✗ M failed (reasons)`, `⏭ K skipped (duplicates / your call)`.
 
-## 安装 Skill
+## Platform compatibility
 
-把仓库 clone 到你 agent 约定的 skills 目录。**clone 时显式指定目标目录名为 `anki-tutor`**（与 skill 名一致，避免混乱）：
+The skill is driven by a single `SKILL.md`; helper scripts and the optional Anki add-on source ship with the repo, so it isn't tied to any specific agent. Verified on **Claude Code** and **ZCode**; any agent that understands the SKILL.md convention should work.
+
+## Requirements
+
+Scripts and add-on sources are all bundled — you only need the runtime:
+
+| Component | Required | What it does | If missing |
+|---|---|---|---|
+| Anki desktop | Yes (running) | Cards are written through it | Won't work |
+| AnkiConnect add-on | Yes | Install inside Anki; provides the local read/write API (default `localhost:8765`) | Won't work |
+| fsrs_bridge add-on | Optional | Fully automatic FSRS optimization | The agent auto-installs it when missing (restart Anki to take effect); only manual install if that fails — see `plugin/fsrs_bridge/README.md`. Without it, FSRS optimization degrades to manual GUI guidance |
+| Python 3.7+ | Optional (recommended) | Read-only operations (dedup checks, diagnostics collection) run faster and safer via the bundled script | Automatically degrades to the curl flow — no features lost |
+
+## Install
+
+**One-liner** (recommended, requires Node.js):
+
+```bash
+npx skills add Simoniscoming/anki-tutor
+```
+
+> Uses [skills.sh](https://skills.sh), the community-standard tool — supported by virtually every SKILL.md-compatible agent; it installs into the right directory automatically. Add `-g` for a global install.
+
+**Manual clone** (if you'd rather not install Node). Clone into your agent's skills directory and **keep the folder named `anki-tutor`** (same as the skill name, avoids confusion):
 
 ### Claude Code
 
 ```bash
-# 项目级（仅当前项目可用）
+# Project-level (current project only)
 git clone https://github.com/Simoniscoming/anki-tutor.git .claude/skills/anki-tutor
 
-# 全局（所有项目可用）
+# Global (all projects)
 git clone https://github.com/Simoniscoming/anki-tutor.git ~/.claude/skills/anki-tutor
 ```
 
 ### ZCode
 
 ```bash
-# 用户级（所有项目可用）
+# User-level (all projects)
 git clone https://github.com/Simoniscoming/anki-tutor.git ~/.agents/skills/anki-tutor
 
-# 项目级（仅当前项目可用）
+# Project-level (current project only)
 git clone https://github.com/Simoniscoming/anki-tutor.git .agents/skills/anki-tutor
 ```
 
-> Windows 上 `~` 即 `C:\Users\<你的用户名>`。
-> 同名 Skill 下，项目级会覆盖用户级。可据此做"用户级稳定版 + 项目级实验版"双轨。
+> On Windows, `~` is `C:\Users\<your username>`.
+> A project-level skill overrides a same-named user-level one — handy for a "stable user-level + experimental project-level" setup.
 
-### 其它兼容 SKILL.md 的 agent
+### Other SKILL.md-compatible agents
 
-放进你 agent 约定的 skills 目录即可（具体路径查你 agent 的文档）。只要它认 `SKILL.md` 的 frontmatter，就能识别本 Skill。
+Drop it into your agent's skills directory (check its docs for the exact path).
 
-## 更新
+## Update
 
-Skill 是磁盘上的静态文件，agent 不会自动更新，需手动 pull：
+Skills are static files on disk — agents don't auto-update them:
 
 ```bash
-git -C <Skill 安装路径> pull
+git -C <skill install path> pull
 ```
 
-改动在**下次**会话生效。
+(For npx installs: re-run `npx skills add Simoniscoming/anki-tutor`, or git pull inside the install directory.)
+Changes take effect from the **next** session.
 
 ## License
 
-MIT — 见 [LICENSE](./LICENSE)。可自由使用、修改、分发（含商用），保留版权声明即可。
+MIT — see [LICENSE](./LICENSE). Free to use, modify, and distribute (including commercially), as long as the copyright notice is retained.
