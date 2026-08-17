@@ -6,6 +6,8 @@ Turn any content into high-quality Anki flashcards — and coach your learning p
 
 For exam crammers, med students, language learners, programmers… anyone who uses Anki but is tired of typing cards by hand or digging through scheduling parameters.
 
+> An AI agent **skill** — install into Claude Code / ZCode to use.
+
 ## ✨ Why you'll like it
 
 - **Cards from plain words.** Paste text, code, or formulas — or drop in a screenshot — and it splits everything into atomic flashcards. One nod from you and they're in Anki. No more hand-typing cards one by one.
