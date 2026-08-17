@@ -1,7 +1,7 @@
 ---
 name: anki-tutor
 version: 0.1.0
-description: 把文本/笔记/代码/公式/图片拆成高质量 Anki 闪卡并写入 Anki。当用户说"做成 anki 卡片""加进 anki""做个 flashcard""帮我背这个""这段老记不住""这个会考""记到 anki 里""make anki cards""turn this into flashcards"时使用。即使用户没直接说"anki"或"卡片"，只要流露出明确的记忆意图——比如贴代码/公式/术语说"老是忘""怕忘""考试要考""想记牢"——也触发。贴文本默认走拆卡流程，支持自然语言（"光合作用的反应物"→自动拆卡）。不负责纯复习调度、删卡、Anki 报错排查。另：诊断和优化 Anki 学习状况（含 FSRS）也是本 Skill 职责。只要提到 FSRS（优化 FSRS、调 FSRS、更新 FSRS 参数/权重、FSRS 怎么开、重新优化 FSRS）就触发本 Skill——FSRS 默认指 Anki 的间隔重复算法，除非用户明确是在说写代码或改算法实现。用户想看自己学得怎么样、retention 偏低或掉了、复习太多扛不住、哪些卡老记不住、加这些新卡扛不扛得住时也触发，即使用户没说"诊断"或"retention"（读复习日志→算保留率→预测复习负担→给建议；FSRS 优化与开关走配套插件，确认后执行）。
+description: 把文本/笔记/代码/公式/图片拆成高质量 Anki 闪卡并写入 Anki。当用户说"做成 anki 卡片""加进 anki""做个 flashcard""帮我背这个""这段老记不住""这个会考""记到 anki 里""make anki cards""turn this into flashcards"时使用。即使用户没直接说"anki"或"卡片"，只要流露出明确的记忆意图——比如贴代码/公式/术语说"老是忘""怕忘""考试要考""想记牢"——也触发。贴文本默认走拆卡流程，支持自然语言（"光合作用的反应物"→自动拆卡）。不负责纯复习调度、删卡、Anki 报错排查。另：诊断和优化 Anki 学习状况（含 FSRS）也是本 Skill 职责。只要提到 FSRS（优化 FSRS、调 FSRS、更新 FSRS 参数/权重、FSRS 怎么开、重新优化 FSRS）就触发本 Skill——FSRS 默认指 Anki 的间隔重复算法，除非用户明确是在说写代码或改算法实现。用户想看自己学得怎么样、retention 偏低或掉了、复习太多扛不住、哪些卡老记不住、加这些新卡扛不扛得住、"给我看个学习报告/看板"时也触发，即使用户没说"诊断"或"retention"（读复习日志→算保留率→预测复习负担→给建议；诊断结果自动产出 HTML 看板 + chat 摘要，本地打开、云端降级为纯摘要；FSRS 优化与开关走配套插件，确认后执行）。
 ---
 
 # Anki 制卡助手
@@ -26,7 +26,7 @@ description: 把文本/笔记/代码/公式/图片拆成高质量 Anki 闪卡并
 
 ## 何时不使用（交给别的工具，别抢活）
 
-- 纯查现有卡 → 直接用 AnkiConnect 的 `findNotes`/`notesInfo`（curl），不必走本 Skill 的拆卡流程
+- 纯查现有卡 → 先跑 `scripts/anki_probe.py`（check/dedup，只读防坑）；脚本不可用再退 AnkiConnect 的 `findNotes`/`notesInfo`（curl）。两种方式都不走拆卡流程
 - 纯复习/调度 → 不是本 Skill 职责（未来可能有 anki-review）
 - 删卡 → 直接用 `deleteNotes`（注意它需 `confirmDeletion: true`）
 - Anki 本身报错、AnkiConnect 连不上 → 排障，不是制卡
@@ -37,6 +37,7 @@ description: 把文本/笔记/代码/公式/图片拆成高质量 Anki 闪卡并
 
 1. **Anki 桌面端正在运行**（不是手机版，不是 AnkiWeb 网页）
 2. **AnkiConnect 插件已启用**（默认监听 `http://localhost:8765`）
+3. **可选加速**：Python 3.7+（跑 `scripts/anki_probe.py`，只读操作优先用它；没装自动降级 curl 模板，功能不缺）
 
 本 Skill **不依赖外部 MCP**。与 Anki 的交互分两条 curl 通道：① **AnkiConnect**（`http://localhost:8765`，制卡/诊断/配置用）；② **配套插件 fsrs_bridge**（`http://localhost:8766`，仅 Tier 3 自动优化用，没装则降级为 GUI 指引）。两者都是本地 HTTP + JSON-RPC。AnkiConnect 的 action 白名单、curl 模板、已知坑详见 `references/anki-control.md`——**调用前必读**；fsrs_bridge 详见 `references/fsrs-optimize.md`。
 
@@ -49,9 +50,11 @@ description: 把文本/笔记/代码/公式/图片拆成高质量 Anki 闪卡并
 ```
 用户贴文本 / 提供图片
    │
-   ├─ 涉及图片 ──► 读 references/image-input.md，默认走两条全自动路径：
+   ├─ 涉及图片/视频 ──► 读 references/image-input.md，默认走两条全自动路径：
    │     ① 图文嵌入卡（图当答案）→ storeMediaFile 传图 + 字段写 <img>，进下方流程
    │     ② 图片作制卡输入 → 多模态识别转文本，再走下方文本流程
+   │     （视频嵌入同①机制，硬约束：先转 WebM——webview 播不了 H.264，
+   │      详见 image-input.md「视频嵌入」）
    │     （Image Occlusion 因每次需用户手动操作、体验差，非必要不推荐，
    │      详见 image-input.md，待将来有全自动方案再解除限制）
    │
@@ -98,6 +101,7 @@ description: 把文本/笔记/代码/公式/图片拆成高质量 Anki 闪卡并
 
 | 用户场景 | 优先动作 | 何时读 reference |
 |---|---|---|
+| 任何只读查询（查重 / 诊断采集 / 牌组树 / 空壳扫描） | **先跑 `scripts/anki_probe.py`**（只读、防坑 2/6），不可用降级 curl | anki-control.md「脚本优先」 |
 | 贴文本要拆卡 | 走完整工作流 ①→⑦ | card-principles.md |
 | 贴了长文本/整章，拆卡后偏多 | >40 张先问精简 vs 继续；>20 张分批预览 | card-principles.md（总量阈值）+ preview-format.md（分批预览） |
 | 用户指定了牌组/类型 | 跳过推断，直接用用户指定 | field-and-tag-conventions.md |
@@ -106,11 +110,12 @@ description: 把文本/笔记/代码/公式/图片拆成高质量 Anki 闪卡并
 | 文本是代码 | 用 Basic，别用 Cloze（会破坏语法） | card-type-selection.md |
 | 担心重复 | 写入前 findNotes 查 | dedup-strategy.md |
 | 用户要改预览 | 按指令语法重生成，再等确认 | preview-format.md |
-| 图当卡片答案（解剖图/示意图等） | 图文嵌入：storeMediaFile 传图 + 字段写 `<img>` | image-input.md（路径A） |
+| 图/视频当卡片答案（解剖图/示意图/演示片段） | 图文嵌入：storeMediaFile 传文件 + 字段写 `<img>`/`<video>`（**视频先转 WebM**） | image-input.md（路径A+视频嵌入） |
 | 图是制卡原料（教材照片/截图） | 多模态识别转文本，再走拆卡 | image-input.md（路径B） |
 | 想要图片遮挡（Image Occlusion） | 非必要不推荐，说明现状并引导用插件 | image-input.md（路径C） |
 | 问学习状况 / retention / 复习超载 / FSRS 有没有开 | 诊断第 0 步查 FSRS 开启 → 拉 revlog 诊断 → 给"现象→建议" | retention-coaching.md |
 | 问复习负担 / 加这么多新卡扛不扛得住 / 未来会不会爆 | 复习负担预测（方案 A/B）→ 预警 + 减负建议 | retention-coaching.md「复习负担预测」 |
+| 诊断跑完（自动）/ 要看板 / 学习报告 | 填 assets 模板 → 写 dashboards 目录 → 开浏览器（本地）或纯 chat 摘要（云端）→ 落盘历史 | dashboard.md |
 | 表露学习目标（考研·语言·编程·考证） | 推荐配方 → 预览 → 确认后 saveDeckConfig | recipes.md |
 | 考试倒计时 | 日历反推算新卡量 → B 速通配方 | recipes.md |
 | 帮我优化 FSRS / 更新参数 / 重新优化 | 场景 B：算权重 → 确认 → fsrsApply（默认不重排）| fsrs-optimize.md |
@@ -196,7 +201,7 @@ description: 把文本/笔记/代码/公式/图片拆成高质量 Anki 闪卡并
 本 Skill 在制卡之外，已支持帮用户搭并优化记忆系统：
 
 - **Tier 1 配置**（`references/recipes.md`）：按人群目标（长期/速通/减压维护/技术/生活）推荐 FSRS 配方，预览确认后写入
-- **Tier 2 诊断**（`references/retention-coaching.md`）：读复习日志算实际保留率，按决策树给优化建议，全程只读
+- **Tier 2 诊断**（`references/retention-coaching.md`）：读复习日志算实际保留率，按决策树给优化建议，全程只读。跑完自动产出 chat 摘要 + 自包含 HTML 看板（本地浏览器打开，云端降级为纯摘要），并落盘历史快照供将来趋势对比（`references/dashboard.md`）
 - **Tier 3 自动优化**（`references/fsrs-optimize.md`）：用配套插件 fsrs_bridge 全自动优化 FSRS 参数 + 开关 FSRS 总开关。诊断/制卡时顺带发现"该优化了"会提一句；执行前用户确认；执行后自动记 optimize-log.json。**唯一依赖配套插件的环节**（8766），没装则降级为 GUI 指引
 
 诊断自动触发（见 description）；配置在制卡/诊断对话中顺带处理。Tier 1+2 走 curl + AnkiConnect，零新依赖；Tier 3 需配套插件。

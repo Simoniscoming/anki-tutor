@@ -9,7 +9,7 @@
 - 连通性自检 ............................. 见下文「自检」
 - 已验证 action 白名单 ................... 见下文「白名单」
 - curl 模板（读写卡/配置/统计）.......... 见下文「模板」
-- 三个必须防御的坑 ....................... 见下文「三坑」
+- 六个必须防御的坑 ....................... 见下文「六坑」
 - FSRS 能力边界 ......................... 见下文「FSRS 边界」
 - 评估学习计划的数据来源 ................. 见下文「学习计划数据」
 
@@ -40,6 +40,32 @@ curl -s -X POST http://localhost:8765 -d '{"action":"version","version":6}'
 
 ---
 
+## 脚本优先（scripts/anki_probe.py）
+
+**只读操作先跑脚本，脚本不可用再降级本文件的 curl 模板。** 脚本把坑 2/6 的防御（牌组名只从 deckNames 精确解析、参数全程不过 shell、空结果自动交叉验证）和字段归一化（英文/中文 locale 模型通吃）固化成了代码，LLM 不再手写解析——这正是查重类任务最容易翻车的地方。
+
+| 子命令 | 用途 | 替代的手工流程 |
+|---|---|---|
+| `check` | 连通性 + 牌组树 + bridge 探测 | 自检 + deckNames |
+| `dedup --deck D --query Q` | 查重候选 + 字段归一化（含空结果交叉验证） | 模板 3 两步 + 手写解析 |
+| `collect --deck D [--days N]` | 诊断采集 + 指标（保留率/三道闸/backlog/streak/预测/leech/意图），`--json` 直接喂看板模板 | retention-coaching.md「采集」整节 |
+| `shells` | 空壳牌组扫描 + 创建时间溯源 | 坑 6 的事后排查 |
+| `selftest [--deck D]` | 上游返回形状探针（**Anki 升级后先跑这个**） | apiReflect 人工比对 |
+
+```bash
+# Windows 先试 python，macOS/Linux 用 python3；--json 得机器可读输出（放子命令前后均可）
+python <skill目录>/scripts/anki_probe.py check
+python <skill目录>/scripts/anki_probe.py dedup --deck "AI工程化" --query "MCP"
+python <skill目录>/scripts/anki_probe.py collect --deck "AI工程化" --days 30 --json
+```
+
+- **退出码**：0 成功 / 1 Anki 没开 / 2 用法错（含牌组名不存在——坑 6 防御在此触发）/ 3 Anki 返回错误或 selftest 形状探针失败。
+- **降级条件**：Python ≥3.7 不可用，或脚本 exit 3（上游结构漂移）→ 回下方 curl 模板手工流程，并把漂移补进白名单「返回要点」列。
+- **红线不变**：脚本只读。查重候选"像不像"、诊断建议仍由 LLM 判断，写入操作永远走确认制。
+- 评估协议与重新验证方法见 `scripts/README.md`；脚本要求 Python 3.7+（低于此版本启动即报错），实测 3.13。
+
+---
+
 ## 白名单
 
 > **分类说明（两类标记）**：
@@ -60,7 +86,7 @@ curl -s -X POST http://localhost:8765 -d '{"action":"version","version":6}'
 | ✅ `setEaseFactors` | 写难度因子 | 整数数组 |
 | ✅ `cardsToNotes` | cardId → noteId | noteId 数组 |
 | 🟡 `cardsModTime` <!-- unchecked --> | 卡片修改时间 | — |
-| 🟡 `setSpecificValueOfCard` <!-- unchecked --> | 设卡片特定字段值 | — |
+| ✅ `setSpecificValueOfCard` | 设卡片特定字段值（实测 2026-08-17，**仅测试造数用，别对用户库用**） | 参数是 `keys`/`newValues` **数组** + `warning_check:true`（lapses/queue/due/reps 等字段在保护名单，不开此开关会被静默拒绝返回 False）。可改 lapses（造 leech）；改 queue/due 造"到期复习"**无效**——调度器不计入 due |
 | ✅ `suspend` | 挂起卡片（调控计划） | true/false |
 | ✅ `unsuspend` | 恢复卡片 | — |
 | ✅ `suspended` | 查单卡是否挂起 | bool |
@@ -78,9 +104,9 @@ curl -s -X POST http://localhost:8765 -d '{"action":"version","version":6}'
 | ✅ `addNote` | 建单张 | noteId |
 | ✅ `addNotes` | 批量建（≤100/批） | noteId 数组 |
 | ✅ `findNotes` | 按 query 搜笔记（查重用） | noteId 数组 |
-| ✅ `notesInfo` | 取笔记详情（字段/标签/模型） | 含 fields、tags、modelName |
+| ✅ `notesInfo` | 取笔记详情（字段/标签/模型） | 含 fields、tags、modelName；**cards 是 cardId 整数列表**（实测 2026-08，不是对象数组） |
 | ✅ `updateNoteFields` | 改笔记字段 | true/false |
-| ✅ `deleteNotes` | 删笔记（**需 confirmDeletion:true**） | — |
+| ✅ `deleteNotes` | 删笔记（**需 confirmDeletion:true**） | — ；⚠ 实测 2026-08-17 参数行为不稳：一次接受 `confirmDeletion`、一次报 unexpected keyword——带与不带都试过能删，**永远先经用户确认再调** |
 | 🟡 `canAddNote` <!-- unchecked --> | 预检：能否加单卡 | bool |
 | 🟡 `canAddNotes` <!-- unchecked --> | 预检：能否加批量卡 | bool 数组 |
 | 🟡 `canAddNoteWithErrorDetail` <!-- unchecked --> | 预检单卡 + 错误详情 | — |
@@ -101,14 +127,14 @@ curl -s -X POST http://localhost:8765 -d '{"action":"version","version":6}'
 | ✅ `changeDeck` | 移动卡片到别的牌组 | — |
 | ✅ `getDeckConfig` | **读牌组配置（含全部 FSRS 字段）** | 完整 config 对象 |
 | ✅ `saveDeckConfig` | **写牌组配置（传完整对象）** | true/false |
-| ✅ `cloneDeckConfigId` | 克隆配置组 | 新 configId |
+| ✅ `cloneDeckConfigId` | 克隆配置组 | 新 configId（实测 2026-08：参数是 camelCase `cloneFrom`，不是 `clone_from`） |
 | ✅ `removeDeckConfigId` | 删配置组 | — |
 | ✅ `getDeckStats` | 每牌组的 new/learn/review 计数 | 按 deckId 分组 |
 | 🟡 `deckNamesAndIds` <!-- unchecked --> | 牌组名 + ID（比 deckNames 更全） | — |
 | 🟡 `deckNameFromId` <!-- unchecked --> | deckId → name | — |
 | 🟡 `getDecks` <!-- unchecked --> | 查 cardId 属于哪些 deck | — |
 | ✅ `deleteDecks` | 删牌组（**Anki 2.1.28+ 强制 cardsToo:true**） | — |
-| 🟡 `setDeckConfigId` <!-- unchecked --> | 给牌组换配置组 | — |
+| ✅ `setDeckConfigId` | 给牌组换配置组（实测 2026-08：参数是 `decks` **数组** + `configId`，不是单数 `deck`） | true |
 
 ### 模型/模板（Model）
 
@@ -121,7 +147,7 @@ curl -s -X POST http://localhost:8765 -d '{"action":"version","version":6}'
 | 🟡 `modelNameFromId` <!-- unchecked --> | modelId → name |
 | 🟡 `findModelsById` <!-- unchecked --> | 按 ID 查模型详情 |
 | 🟡 `findModelsByName` <!-- unchecked --> | 按名查模型详情 |
-| 🟡 `modelTemplates` <!-- unchecked --> | 读模板（Front/Back HTML） |
+| ✅ `modelTemplates` | 读模板（Front/Back HTML）；可判别双向模型（数模板数） | 模板列表含 name/qfmt/afmt（2026-08-16 实测） |
 | 🟡 `modelStyling` <!-- unchecked --> | 读 CSS |
 | 🟡 `updateModelTemplates` <!-- unchecked --> | 改模板 |
 | 🟡 `updateModelStyling` <!-- unchecked --> | 改 CSS |
@@ -162,6 +188,8 @@ curl -s -X POST http://localhost:8765 -d '{"action":"version","version":6}'
 | ✅ `deleteMediaFile` | 删媒体 |
 | 🟡 `getMediaDirPath` <!-- unchecked --> | 取 media 目录绝对路径 |
 
+> **视频编解码实测（2026-08-17）**：桌面端 webview 的 `<video>` 标签**只认 WebM（VP8/VP9 实测可播）**——H.264 MP4 会渲染出播放器但点 ▶ 无反应（Qt webview 无专有编解码器，社区共识）。制视频卡统一转 WebM：`ffmpeg -c:v libvpx-vp9 -c:a libopus`。`[sound:]` 标签走外部 mpv 播放器，不受此限制，MP4 也能弹窗播放。
+
 ### 统计 / 复习历史（评估学习计划用）
 
 | action | 用途 | 返回要点 |
@@ -178,7 +206,7 @@ curl -s -X POST http://localhost:8765 -d '{"action":"version","version":6}'
 
 | action | 用途 |
 |---|---|
-| 🟡 `guiBrowse` <!-- unchecked --> | 打开浏览器搜卡 |
+| ✅ `guiBrowse` | 打开浏览器搜卡（实测 2026-08-17：`query:"nid:123,456"` 正常打开并选中，返回选中的 cardId 数组） | 选中 cardId 数组 |
 | 🟡 `guiSelectCard` <!-- unchecked --> | 浏览器选单卡 |
 | 🟡 `guiSelectNote` <!-- unchecked --> | 浏览器选笔记 |
 | 🟡 `guiSelectedNotes` <!-- unchecked --> | 取当前选中的笔记 |
@@ -308,7 +336,7 @@ curl -s -X POST http://localhost:8765 -d '{
 **关键：必须先 get 全量，改完再 save，不能只传部分字段。**
 
 ```bash
-# 步骤见下方「三坑-坑3」的完整往返代码
+# 步骤见下方「六坑-坑3」的完整往返代码
 # 核心是：getDeckConfig 拿全量 → 改 desiredRetention/fsrsWeights → saveDeckConfig 写回 → getDeckConfig 验证
 ```
 
@@ -322,6 +350,8 @@ curl -s -X POST http://localhost:8765 -d '{
   "params":{"decks":["Skills","统计学","逻辑学"]}
 }'
 # 返回每牌组的 new_count/learn_count/review_count
+# 注意（2026-08-17 实测）：搜索的 is:due 包含到期新卡+学习中卡，而 getDeckStats 的
+# review_count 只数【复习队列】——两者对不上不是 bug，backlog 交叉验证时别误读。
 
 # 某张卡的 FSRS 预测（未来间隔）
 curl -s -X POST http://localhost:8765 -d '{
@@ -347,6 +377,10 @@ curl -s -X POST http://localhost:8765 -d '{
   "params":{"deck":"Skills","startID":<毫秒级unix时间戳>}
 }'
 # 注意：startID 是毫秒级（不是秒）。若返回空，可能该 deck 还没卡被复习过（用 findCards "reviewed:N" 验证）
+# ⚠ 实测坑（2026-08）：cardReviews 只匹配【精确牌组名】，不含子牌组！
+#   牌组有子牌组时，复习记录都挂在子牌组名下，查父牌组会返回空。
+#   先 deckNames 看清树结构，逐个子牌组拉取后聚合；
+#   而 findCards 的 deck: 搜索是含子牌组的，两者语义不一致，别互相验证出错判。
 
 # 取一批卡片的完整复习历史（比 cardReviews 更聚焦）
 curl -s -X POST http://localhost:8765 -d '{
@@ -396,9 +430,9 @@ curl -s -X POST http://localhost:8765 -d '{
 
 ---
 
-## 五坑
+## 六坑
 
-这五个坑都来自实测，每个都有明确的防御方法。
+这六个坑都来自实测，每个都有明确的防御方法。
 
 ### 坑 1：LLM 幻觉 action 名
 
@@ -433,6 +467,11 @@ AnkiConnect 在涉及牌组名时走的是**两套完全不同的语法**，混�
 永远不要把第一个空结果直接当成"牌组里没东西"。
 
 > 反面案例：查 `deck:git 杂项` 返回 `[]`，误判"空牌组"差点删数据；改用 `"deck:git 杂项"` 后查到 4 张卡。
+
+**响应侧同样有坑（2026-08-17 无 Python 降级路径实测）**：
+1. AnkiConnect 返回的 JSON 对非 ASCII 做 `\uXXXX` 转义——别直接在控制台 cat 出来人读，重定向到文件（`-o 文件`）再用 Read 工具读、按需解码；
+2. Windows 双路径：Git Bash 的 `/tmp` 对 Windows 侧工具（Read / Windows Python）不可见——临时文件统一放 `$TEMP`（两边都认），要 Windows 绝对路径时 `cygpath -w` 转换；
+3. 降级路径的隐性成本：空结果交叉验证、字段归一化这些脚本一条命令的事，手工路径要多轮 curl 且每步有出错面——能用脚本就用脚本。
 
 ### 坑 3：saveDeckConfig 部分写会静默失败（最隐蔽的坑）
 
@@ -493,6 +532,18 @@ curl -s -X POST http://localhost:8765 -d '{
 - 灌完抽查几张卡，看 FSRS 给的间隔是否合理（而不是异常长）
 
 本 Skill 默认不调用此 action，除非用户明确要求迁移历史复习数据。
+
+### 坑 6：带牌组名的"只读"action 会静默创建空牌组（实测确认，本库中过招）
+
+`cardReviews` / `getDeckStats` / `getLatestReviewID` 这三个看起来纯只读的 action，内部都用 `collection.decks.id(name)` 解析牌组名——**Anki 这个 API 的默认行为是"名字不存在就创建空牌组"**（源码 addons21/2055492159/__init__.py 已核实）。后果：拿一个猜的/拼错的/只有子牌组的名字去调用，库里无声多出一个 0 卡空壳牌组。
+
+实测案例（2026-08-16）：逐牌组统计时手工传入顶层名 `Skill课程`/`MCP`/`Default`（真实卡片在 `AI工程化::Skill课程` 等子牌组），一次循环凭空多出 3 个空牌组；更早的测试会话用同样方式留下过 `Python`/`git`/`互联网通识` 三个空壳。
+
+**防御（硬规则）**：
+1. **牌组名永远来自 `deckNames` 的返回，绝不手打、不猜、不截断**。要遍历就先拉 deckNames 再循环。
+2. 记住 `cardReviews` 只匹配**精确名**（不含子牌组，见模板7注释）；`getDeckStats`/`findCards` 的 deck 匹配**含子牌组**——三者语义不同，别混用互验。
+3. 诊断/看板流程跑完后如果怀疑产生了空壳，用 `findCards "deck:X"` 数卡数确认（0 卡 + 名字不在预期内 = 空壳），经用户确认后 `deleteDecks cardsToo:true` 清理（空壳无数据，零风险）。
+4. 判定空壳来源：牌组 ID 本身是创建时刻的毫秒时间戳（`getDeckStats` 返回的 key），能直接看出是什么时候、哪次会话建出来的。**例外**：内置默认牌组 ID 恒为 1、不具时间戳语义，且 getDeckStats 可能不返回它——溯源显示 `?` 属正常，该牌组不可删。
 
 ---
 
@@ -570,4 +621,4 @@ curl -s -X POST http://localhost:8765 -d '{
 3. **MCP 救不了核心风险**——Anki 一升级 AnkiConnect 可能挂，这是 #1 风险，MCP wrapper 同样继承这个风险。
 4. **灵活性**——评估学习计划是动态判断，curl + LLM 推理比 MCP 的固定工具更灵活。
 
-代价是丢了 schema 校验，但用「白名单」+「三坑防御」补回来了。详见 SKILL.md 的设计说明。
+代价是丢了 schema 校验，但用「白名单」+「六坑防御」补回来了。详见 SKILL.md 的设计说明。

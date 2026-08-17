@@ -106,6 +106,8 @@ curl -s --max-time 120 http://localhost:8766 --data-binary @/tmp/req.json
 3. 看 fsrsItems（参与训练的复习数）：
      < 1000  → 停。提示「数据还不够（当前 N 条），优化出的参数不稳，建议再攒攒」。不应用。
      >= 1000 → 继续
+   实测注（2026-08-17）：fsrsItems 的口径比窗口 revlog 数严——导入的旧记录可能一条都
+   不计入（实测 40 条 revlog 报 fsrsItems=0）。以 fsrsOptimize 返回为准，勿与 revlog 数互推。
 4. 汇报 + 等确认：「距上次优化 X 天，又攒了 Y 条新复习。新权重算好了（用了 N 条数据）。
                    要不要应用？默认不重排卡片（温和，新参数慢慢生效）；要立刻重排告诉我。」
 5. 用户同意 → fsrsApply {"deck":牌组, "fsrsReschedule":false}   ← 默认不重排

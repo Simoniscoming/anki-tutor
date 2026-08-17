@@ -16,6 +16,8 @@
 | Basic (and reversed) | `Front` / `Back` | 同 Basic，模型自动生成反向卡 |
 | 图文卡 | 同 Basic 或 Cloze | 某字段嵌 `<img src="文件名">` |
 
+⚠ **locale 坑（2026-08 实测）**：上表是英文 locale 的名字。**中文 locale 的全新库里没有 "Basic"/"Cloze"**——标准模型叫「问答题」（字段 `正面`/`背面`）和「填空题」（字段 `文字`/`背面额外`），`addNote modelName:"Basic"` 会直接报 `model was not found`。所以**模型名和字段名永远实查**（`modelNames` + `modelFieldNames`），写入、查重、诊断都别硬编码英文名。`scripts/anki_probe.py dedup` 的字段归一化已内置这套中英文兜底。
+
 ### 字段内容约定
 
 - **支持 HTML**：字段内容会被当 HTML 渲染，可以加 `<b>`/`<i>`/`<br>`/`<img>`/`<code>`。

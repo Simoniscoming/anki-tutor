@@ -152,6 +152,9 @@
 核心四步：
 
 1. **读全量** `getDeckConfig`（拿完整 config 对象 + 当前 desiredRetention/fsrsWeights）
+
+⚠ **共享配置组隔离（2026-08-17 实测发现）**：多个牌组可能共用同一个配置组（新库常见：全部挂在默认组 id=1）。直接 saveDeckConfig 会波及同组**所有**牌组。改配置前先核对归属：目标牌组与其他牌组的 config id 是否相同；共享时先 `cloneDeckConfigId`（⚠ 参数是 camelCase `cloneFrom`，实测 2026-08）克隆独立配置组，改完用 `setDeckConfigId`（⚠ 参数是 `decks` **数组** + `configId`）绑定到目标牌组，再读回验证隔离（抽查一个未参与牌组的 DR 没被改动）。
+
 2. **改字段**：只改 `desiredRetention` / 每日新卡量 / 最大间隔。**别动 fsrsWeights**——那 17 个权重必须靠 Anki 的 Optimize，手调会破坏算法
 3. **写回 + 读回验证**：`saveDeckConfig` 必须传**完整** config 对象（坑3：只传部分会静默失败）；写完必须 `getDeckConfig` 读回确认生效
 4. **写意图**：配置生效后，立即把本次决策写入 `intent.json`（配方标签 + 目标 + deadline + currentDR + accepts + 时间戳）。**配方 B 必填 deadline**（无 deadline 的速通意图不允许写入——没有迁移触发器，B 的"考后必须切回"就守不住）。这一步与读回验证同等级：配置变了意图就必须同步，否则诊断层会失去参照、退化成纯归一化。详见 [`./intent-persistence.md`](./intent-persistence.md)。

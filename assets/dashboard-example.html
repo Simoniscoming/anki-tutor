@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<!--
+  anki-tutor 看板成品示例（v2 · 小白友好版）：所有数字均为编造的演示数据，
+  仅展示「模板填好后长什么样」。真实生成流程见 references/dashboard.md。
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>日语::JLPT N2 词汇 · 学习体检报告 · 2026-08-16 14:30</title>
+  <style>
+    :root {
+      --bg-primary: #f5f5f7; --bg-secondary: #ffffff; --bg-tertiary: #e5e5e7;
+      --border: #d1d1d6; --text-primary: #1d1d1f; --text-secondary: #86868b; --text-tertiary: #aeaeb2;
+      --accent: #0071e3; --success: #34c759; --warning: #ff9f0a; --error: #ff3b30;
+      --success-bg: #e9f9ee; --warning-bg: #fff4e0; --error-bg: #ffeceb;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1d1d1f; --bg-secondary: #2d2d2f; --bg-tertiary: #3d3d3f;
+        --border: #424245; --text-primary: #f5f5f7; --text-secondary: #86868b; --text-tertiary: #636366;
+        --accent: #0a84ff; --success: #30d158; --warning: #ff9f0a; --error: #ff453a;
+        --success-bg: rgba(52,199,89,0.12); --warning-bg: rgba(255,159,10,0.12); --error-bg: rgba(255,69,58,0.12);
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif;
+      background: var(--bg-primary); color: var(--text-primary);
+      line-height: 1.5; padding: 1.5rem; max-width: 60rem; margin: 0 auto;
+    }
+    .header {
+      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1rem 1.5rem; margin-bottom: 1.5rem;
+      display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; align-items: center; justify-content: space-between;
+    }
+    .header h1 { font-size: 1.15rem; font-weight: 600; }
+    .header .meta { font-size: 0.8rem; color: var(--text-secondary); }
+    .header .meta span { margin-right: 1rem; white-space: nowrap; }
+    .badge {
+      display: inline-block; font-size: 0.72rem; font-weight: 500;
+      border-radius: 99px; padding: 0.15rem 0.6rem; white-space: nowrap;
+    }
+    .badge.ok { background: var(--success-bg); color: var(--success); }
+    .badge.warn { background: var(--warning-bg); color: var(--warning); }
+    .badge.err { background: var(--error-bg); color: var(--error); }
+    .badge.neutral { background: var(--bg-tertiary); color: var(--text-secondary); }
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+      gap: 1rem; margin-bottom: 1.5rem;
+    }
+    .kpi { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; }
+    .kpi .label { font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 0.35rem; }
+    .kpi .term { font-size: 0.68rem; color: var(--text-tertiary); margin: -0.25rem 0 0.35rem; }
+    .kpi .value { font-size: 1.7rem; font-weight: 650; }
+    .kpi .value small { font-size: 0.95rem; font-weight: 500; color: var(--text-secondary); }
+    .kpi .delta { font-size: 0.78rem; margin-top: 0.25rem; }
+    .kpi .delta.good { color: var(--success); }
+    .kpi .delta.bad { color: var(--error); }
+    .kpi .delta.meh { color: var(--warning); }
+    .kpi .delta.flat { color: var(--text-secondary); }
+    .gauge { margin-top: 0.6rem; }
+    .gauge-track { position: relative; height: 0.6rem; background: var(--bg-tertiary); border-radius: 99px; }
+    .gauge-fill { height: 100%; border-radius: 99px; background: var(--accent); }
+    .gauge-fill.err { background: var(--error); }
+    .gauge-marker { position: absolute; top: -0.3rem; width: 2px; height: 1.2rem; background: var(--text-primary); }
+    .gauge-legend { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.3rem; }
+    .section { margin-bottom: 1.5rem; }
+    .section > h2 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.75rem; }
+    .chart { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem 0.75rem; }
+    .chart-bars { display: flex; align-items: flex-end; gap: 3px; height: 8rem; border-bottom: 1px solid var(--border); }
+    .bar-col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
+    .bar { width: 100%; border-radius: 3px 3px 0 0; background: var(--accent); min-height: 2px; }
+    .bar.hot { background: var(--warning); }
+    .chart-x { display: flex; font-size: 0.65rem; color: var(--text-tertiary); margin-top: 0.3rem; justify-content: space-between; }
+    .chart-note { font-size: 0.72rem; color: var(--text-secondary); margin-top: 0.5rem; }
+    .alerts { display: flex; flex-direction: column; gap: 0.6rem; }
+    .alert {
+      background: var(--bg-secondary); border: 1px solid var(--border);
+      border-left: 4px solid var(--text-tertiary); border-radius: 8px; padding: 0.7rem 1rem; font-size: 0.88rem;
+    }
+    .alert.ok { border-left-color: var(--success); }
+    .alert.warn { border-left-color: var(--warning); }
+    .alert.err { border-left-color: var(--error); }
+    .alert .alert-title { font-weight: 600; margin-bottom: 0.15rem; }
+    .alert .alert-body { color: var(--text-secondary); font-size: 0.82rem; }
+    .table-wrap { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { text-align: left; padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); }
+    th { font-size: 0.72rem; color: var(--text-secondary); }
+    tr:last-child td { border-bottom: none; }
+    td.num { font-variant-numeric: tabular-nums; }
+    td .muted { color: var(--text-tertiary); font-size: 0.75rem; }
+    .actions { display: flex; flex-direction: column; gap: 0.6rem; }
+    .action {
+      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.7rem 1rem; display: flex; gap: 0.75rem; font-size: 0.88rem;
+    }
+    .action .no {
+      background: var(--accent); color: #fff; border-radius: 6px; width: 1.4rem; height: 1.4rem;
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600;
+    }
+    .action .why { color: var(--text-secondary); font-size: 0.78rem; margin-top: 0.15rem; }
+    .glossary details {
+      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 1rem;
+    }
+    .glossary details + details { margin-top: 0.5rem; }
+    .glossary summary { font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+    .glossary details p { font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.4rem; }
+    .footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 0.72rem; color: var(--text-tertiary); }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div>
+      <h1>日语::JLPT N2 词汇 · 学习体检报告</h1>
+      <div class="meta">
+        <span>2026-08-16 14:30</span>
+        <span>看的是：最近 30 天</span>
+        <span>你的目标：长期记住这些内容（设于 2026-05-20）</span>
+      </div>
+    </div>
+    <div>
+      <span class="badge ok">FSRS 智能排期：已开启</span>
+      <span class="badge neutral">42 天没重新校准了</span>
+      <span class="badge warn">发现 2 个信号</span>
+      <span class="badge neutral">DEMO 示例数据</span>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+
+    <div class="kpi">
+      <div class="label">复习时能想起来的比例</div>
+      <div class="term">术语：长期卡实际保留率（mature retention）</div>
+      <div class="value">84.1% <small>目标 90%</small></div>
+      <div class="delta bad">比目标低 5.9 个百分点，且差距够大、数据够多（412 次）、持续够久（30 天）——不是偶然，真的偏低了</div>
+      <div class="gauge">
+        <div class="gauge-track">
+          <div class="gauge-fill err" style="width:84.1%"></div>
+          <div class="gauge-marker" style="left:90%"></div>
+        </div>
+        <div class="gauge-legend"><span>0%</span><span>黑色竖线 = 你的目标 90%</span><span>100%</span></div>
+      </div>
+    </div>
+
+    <div class="kpi">
+      <div class="label">积压的复习（欠账）</div>
+      <div class="term">术语：Backlog</div>
+      <div class="value">3.2 <small>天的量</small></div>
+      <div class="delta good">按现在的速度 3 天多能清完，健康（超过 7 天算偏多，14 天算严重）</div>
+    </div>
+
+    <div class="kpi">
+      <div class="label">连续打卡</div>
+      <div class="term">术语：streak</div>
+      <div class="value">41 <small>天</small></div>
+      <div class="delta flat">一天都没断，节奏很稳</div>
+    </div>
+
+    <div class="kpi">
+      <div class="label">以后每天大概要复习多少（预测）</div>
+      <div class="term">术语：稳态预测 = 实测新卡/天 × k 系数（不是设置里的上限！）</div>
+      <div class="value">≈174 <small>张/天</small></div>
+      <div class="delta flat">按你最近实际每天加 20 张新卡算（设置上限也是 20，跑满了），几个月后会稳定在这个量。低于 200 张/天的舒适参考线，扛得住</div>
+    </div>
+
+  </div>
+
+  <div class="section">
+    <h2>每天复习了多少张（最近 30 天）</h2>
+    <div class="chart">
+      <div class="chart-bars">
+        <div class="bar-col"><div class="bar" style="height:50%"></div></div>
+        <div class="bar-col"><div class="bar" style="height:57%"></div></div>
+        <div class="bar-col"><div class="bar" style="height:60%"></div></div>
+        <div class="bar-col"><div class="bar" style="height:54%"></div></div>
+        <div class="bar-col"><div class="bar" style="height:63%"></div></div>
+        <div class="bar-col"><div class="bar" style="height:69%"></div></div>
+        <div class="bar-col"><div class="bar" style="height:62%"></div></div>
+        <div class="bar-col"><div class="bar" style="height:72%"></div></div>
+        <div class="bar-col"><div class="bar" style="height:66%"></div></div>
+        <div class="bar-col"><div class="bar" style="height:59%"></div></div>
+        <div class="bar-col"><div class="bar" style="height:76%"></div></div>
+        <div class="bar-col"><div class="bar" style="height:82%"></div></div>
+        <div class="bar-col"><div class="bar hot" style="height:88%"></div></div>
+        <div class="bar-col"><div class="bar" style="height:79%"></div></div>
+        <div class="bar-col"><div class="bar hot" style="height:95%"></div></div>
+        <div class="bar-col"><div class="bar hot" style="height:97%"></div></div>
+        <div class="bar-col"><div class="bar hot" style="height:100%"></div></div>
+        <div class="bar-col"><div class="bar hot" style="height:86%"></div></div>
+        <div class="bar-col"><div class="bar" style="height:80%"></div></div>
+        <div class="bar-col"><div class="bar hot" style="height:90%"></div></div>
+        <div class="bar-col"><div class="bar" style="height:83%"></div></div>
+        <div class="bar-col"><div class="bar" style="height:74%"></div></div>
+        <div class="bar-col"><div class="bar" style="height:78%"></div></div>
+        <div class="bar-col"><div class="bar hot" style="height:85%"></div></div>
+        <div class="bar-col"><div class="bar hot" style="height:92%"></div></div>
+        <div class="bar-col"><div class="bar hot" style="height:86%"></div></div>
+        <div class="bar-col"><div class="bar" style="height:82%"></div></div>
+        <div class="bar-col"><div class="bar hot" style="height:88%"></div></div>
+        <div class="bar-col"><div class="bar" style="height:79%"></div></div>
+        <div class="bar-col"><div class="bar" style="height:60%"></div></div>
+      </div>
+      <div class="chart-x"><span>07-18</span><span>07-28</span><span>08-06</span><span>08-16（今天，半天）</span></div>
+      <div class="chart-note">最高的一天复习了 238 张（08-03）· 平均每天 195 张 · 黄色柱 = 超过 200 张的日子（每天 200 张以上大多数人会觉得累）</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>这次诊断发现了什么</h2>
+    <div class="alerts">
+      <div class="alert err">
+        <div class="alert-title">长期卡的记住率偏低</div>
+        <div class="alert-body">复习时只有 84.1% 的长期卡能想起来，你定的目标是 90%。差距够大、数据够多、持续够久（三个条件都满足），说明真的偏低了。最常见原因：①有些卡片本身写得难记 ②目标定高了。建议先抽查最常答错的卡，别急着调参数。</div>
+      </div>
+      <div class="alert warn">
+        <div class="alert-title">FSRS 该重新校准了</div>
+        <div class="alert-body">FSRS 是靠你的真实复习记录学习的排期算法。上次校准是 42 天前，之后又攒了一批新记录——重新算一次能让它排期更准。执行前会再问你一次，默认不打乱现有复习计划。</div>
+      </div>
+      <div class="alert ok">
+        <div class="alert-title">欠账正常 · 打卡没断</div>
+        <div class="alert-body">积压约 3.2 天的量（警戒线 7 天），连续 41 天没断卡，整体节奏是健康的。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>老是记不住的卡（同一张忘了 8 次以上）</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>卡片内容（截断）</th><th>忘了几次</th><th>总共复习</th><th>编号</th><th>建议</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>「取り調べる」的释义与读音……</td>
+            <td class="num">12</td>
+            <td class="num">88</td>
+            <td class="num">1712345678901 <span class="muted">card 1784466326973</span></td>
+            <td>删掉，或换个问法重做</td>
+          </tr>
+          <tr>
+            <td>「案じる」的两个义项……</td>
+            <td class="num">9</td>
+            <td class="num">71</td>
+            <td class="num">1712345701234 <span class="muted">card 1784466411221</span></td>
+            <td>一张卡塞了两个意思，拆成两张</td>
+          </tr>
+          <tr>
+            <td>「疏通（しゅんう）」……</td>
+            <td class="num">8</td>
+            <td class="num">64</td>
+            <td class="num">1712345723456 <span class="muted">card 1784466500410</span></td>
+            <td>考试不考的低频词，建议删</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>最花复习时间的知识点（花时间 ≠ 卡得差）</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>知识点（一张笔记拆成的多张卡）</th><th>名下卡片</th><th>累计复习</th><th>累计忘</th><th>怎么看</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>敬语三分类（尊他 / 自谦 / 郑重）</td>
+            <td class="num">5</td>
+            <td class="num">156</td>
+            <td class="num">3</td>
+            <td>花时间但记得住 <span class="muted">已经稳了，可以考虑合并成更少的卡省时间</span></td>
+          </tr>
+          <tr>
+            <td>「〜わりに / 〜くせに」对比用法</td>
+            <td class="num">4</td>
+            <td class="num">134</td>
+            <td class="num">2</td>
+            <td>花时间但记得住 <span class="muted">同上，稳定后可合并</span></td>
+          </tr>
+          <tr>
+            <td>拟声拟态词组（どんどん / こんこん / …）</td>
+            <td class="num">6</td>
+            <td class="num">121</td>
+            <td class="num">9</td>
+            <td>又花时间又常忘 <span class="muted">问题卡，优先拆细或重做，不是合并</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>接下来可以怎么做（你来选，不动手）</h2>
+    <div class="actions">
+      <div class="action"><div class="no">1</div><div>
+        抽 10 张最常答错的卡出来看看，改写或删掉
+        <div class="why">记住率偏低时，先怀疑卡片写得不好，别急着调参数</div>
+      </div></div>
+      <div class="action"><div class="no">2</div><div>
+        重新校准 FSRS（已经 42 天没校准了）
+        <div class="why">动手前会再问你一次；默认不打乱你现有的复习排期</div>
+      </div></div>
+      <div class="action"><div class="no">3</div><div>
+        先什么都不动，30 天后再测一次
+        <div class="why">如果抽查后卡片没问题，再考虑把目标从 90% 降到 87% 左右——降目标会让每天复习变少，但忘得也多一点</div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="section glossary">
+    <h2>有的词看不懂？点开看解释</h2>
+    <details>
+      <summary>记住率 / 保留率（retention）</summary>
+      <p>复习一张卡时你能正确想起答案的比例。84% 意思是每 100 次复习里约 84 次能答对。只统计「长期卡」——间隔超过 21 天的卡才算真的记住了，刚学的新卡不算。</p>
+    </details>
+    <details>
+      <summary>目标（DR，desired retention）</summary>
+      <p>你（或默认设置）给 Anki 定的记住率目标。定得越高，复习越频繁、每天量越大；定得越低越省时间，但忘得也多。Anki 默认 90%，一般 80%~95% 之间都合理。</p>
+    </details>
+    <details>
+      <summary>FSRS</summary>
+      <p>Anki 的新一代排期算法。它分析你过去的复习记录，预测你什么时候会忘，赶在快忘的时候安排复习。它会随你的使用越来越准，前提是定期「重新校准」（相当于让它复习功课）。</p>
+    </details>
+    <details>
+      <summary>积压 / 欠账（Backlog）</summary>
+      <p>到期了但还没做的复习一共堆了多少。用「按现在的速度几天能清完」来衡量：3 天内算正常，超过 7 天偏多，超过 14 天比较难追回来。</p>
+    </details>
+    <details>
+      <summary>老是记不住的卡（leech，钉子卡）</summary>
+      <p>同一张卡忘了 8 次以上（Anki 默认的判定线）。这种卡留着只会反复打击你，通常的出路：删掉、换个问法重做、或拆成更小的卡。</p>
+    </details>
+    <details>
+      <summary>稳态预测 &amp; k 系数</summary>
+      <p>每张新卡日后都要被复习很多次。经验规律：想记住 90%，每张新卡平均带来约 8~10 次复习；目标降到 80% 大约是 5 次。所以「每天 20 张新卡」几个月后约等于「每天 170~200 次复习」。</p>
+    </details>
+  </div>
+
+  <div class="footer">
+    anki-tutor 诊断看板 · 这份报告只描述现状和给建议，不会改动你的任何设置或卡片；真要改什么都会先问你 ·
+    页面里的判断线（差 5 个百分点 / 200 次样本 / 忘 8 次 / 欠账 7·14 天 / k 系数）都是 Anki 社区的经验值，供参考而非标准答案 ·
+    本文件自包含、无外部资源，可离线查看 · 本页数字为演示数据
+  </div>
+
+</body>
+</html>
